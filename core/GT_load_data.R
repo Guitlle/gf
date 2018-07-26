@@ -60,3 +60,17 @@ dt.munisGT = data.table(munisGT)[,
                                  AREA_KM__ = sum(AREA_KM__), Poblacion2010 = sum(Poblacion2010), 
                                  Poblacion2012 = sum(Poblacion2012), Poblacion2015 = sum(Poblacion2015)) ,
                                  by=COD_MUNI__]
+
+# Some municipalities have been created since 2009.
+#    Huehuetenango (13) Petatán (1333) in 2015 was splitted from Concepción Huista (1322)
+#    Escuintla (5) Sipacate (514) in 2015 was splitted from La Gomera (507)
+#    Suchitepequez (10) San José La Máquina (1021) in 2014 was splitted from Cuyotenango (1002)
+#    Petén (17) Las Cruces (1713) in 2011 was splitted from La Libertad (1705)
+#    Petén (17) El Chal (1714) in 2014 was splitted from Dolores (1708)
+#    Zacapa (19) San Jorge (1911) in 2014 was splitted from Zacapa (1901)
+#    San Marcos (12) La Blanca (1230) in 2014 was splitted from Ocós (1218)
+splitted_municipalities = data.table(
+    new_code = c(1322,507,1002,1705,1708,1901,1218),
+    from_code =     c(1333,514,1021,1713,1714,1911,1230),
+    year_of_split = c(2015,2015,2014,2011,2014,2014,2014)
+)
