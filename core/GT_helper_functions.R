@@ -15,10 +15,10 @@ library(data.table)
 # ----getMuniCodeByName-------------------------
 # This function converts a string to a number. It tries to find a municipality 
 # by name and returns its numerical code.
-deptosGT             = unique(munisGT[, c("DEPTO__", "COD_DEPT__") ])
+deptosGT             = unique(munisGT[, c("deptoname", "deptocode") ])
 vocalesTildes        = c("á"="a", "é"="e", "í"="i", "ó"= "o", "ú"="u")
 deptosGT$lookupDepto = str_replace_all(str_to_lower(deptosGT$DEPTO__), vocalesTildes)
-munisGT$lookupMuni   = str_replace_all(str_to_lower(munisGT$NOMBRE__), vocalesTildes)
+munisGT$lookupMuni   = str_replace_all(str_to_lower(munisGT$name), vocalesTildes)
 
 deptoNameToCodeCache  = data.frame(original_name = character(), clean_name = character(), code  = integer(), stringsAsFactors = FALSE)
 muniNameToCodeCache  = data.frame(original_name = character(), clean_name = character(), depto_orig_name = character(), depto_code = integer(), code  = integer(), stringsAsFactors = FALSE)
@@ -47,7 +47,7 @@ getMuniCodeByName <- function (nombreMuni_, nombreDepto_, field = "COD_MUNI__") 
         muniCache = muniNameToCodeCache[muniNameToCodeCache$clean_name == nombreMuni & muniNameToCodeCache$depto_code == depto, "code"]
         
         if (length(muniCache) == 0) {
-            deptoMunis  = munisGT[munisGT$COD_DEPT__ == depto,]
+            deptoMunis  = munisGT[munisGT$deptocode == depto,]
             muni        = deptoMunis[which.min(stringdist(nombreMuni, deptoMunis$lookupMuni, method = "cosine")), field]
             muniNameToCodeCache[nrow(muniNameToCodeCache)+1,] <<- list(original_name = nombreMuni_, clean_name = nombreMuni, depto_orig_name = nombreDepto_, code_depto  = depto, code = muni)
         }
@@ -88,20 +88,32 @@ getDeptoCodeByName <- function (nombreDepto_) {
 # Where P_0 and k are the population at Year 0 and the coefficient of exponential growth, respectively.
 # A is the population at year Y_A and B is the population at year Y_B. We assume that Y_A > Y_B
 
-dt.munisGT[, P_10_12 := (Poblacion2010^(1/2010) / Poblacion2012^(1/2012))^(2010*2012/(2012-2010))] 
-dt.munisGT[, P_12_15 := (Poblacion2012^(1/2012) / Poblacion2015^(1/2015))^(2015*2012/(2015-2012))]
-dt.munisGT[, k_10_12 := log(Poblacion2012/P_10_12)/2012] 
-dt.munisGT[, k_12_15 := log(Poblacion2015/P_12_15)/2015]
-setkey(dt.munisGT, COD_MUNI__)
-GTMuniPopulation <- function (code, year) {
-    parameters = dt.munisGT[J(code), .(ifelse(year>2012, 
+munisGT[, P_10_12 := (Poblacion2010^(1/2010) / Poblacion2012^(1/2012))^(2010*2012/(2012-2010))] 
+munisGT[, P_12_15 := (Poblacion2012^(1/2012) / Poblacion2015^(1/2015))^(2015*2012/(2015-2012))]
+munisGT[, k_10_12 := log(Poblacion2012/P_10_12)/2012] 
+munisGT[, k_12_15 := log(Poblacion2015/P_12_15)/2015]
+munisGT.2009[, P_10_12 := (Poblacion2010^(1/2010) / Poblacion2012^(1/2012))^(2010*2012/(2012-2010))] 
+munisGT.2009[, P_12_15 := (Poblacion2012^(1/2012) / Poblacion2015^(1/2015))^(2015*2012/(2015-2012))]
+munisGT.2009[, k_10_12 := log(Poblacion2012/P_10_12)/2012] 
+munisGT.2009[, k_12_15 := log(Poblacion2015/P_12_15)/2015]
+setkey(munisGT, municode)
+setkey(munisGT.2009, municode)
+GTMuniPopulation <- function (code, year, munis.2009 = FALSE) {
+    if (munis.2009) {
+        parameters = munisGT.2009[J(code), .(ifelse(year>2012, 
+                                               P_12_15 * exp(k_12_15 * year),
+                                               P_10_12 * exp(k_10_12 * year)))]
+    }
+    else {
+        parameters = munisGT[J(code), .(ifelse(year>2012, 
                                               P_12_15 * exp(k_12_15 * year),
                                               P_10_12 * exp(k_10_12 * year)))]
+    }
     parameters
 }
 
 GTDeptoPopulation_ <- function (code, year) {
-    parameters = dt.munisGT[floor(COD_MUNI__/100) == code, .(P_10_12, P_12_15, k_10_12, k_12_15)]
+    parameters = munisGT[floor(municode/100) == code, .(P_10_12, P_12_15, k_10_12, k_12_15)]
     if (year>2012)
         pobmunis = parameters$P_12_15 * exp(parameters$k_12_15 * year)
     else
@@ -122,7 +134,16 @@ GTDeptoPopulation <- function (codes, years) {
 # Function to generate a Guatemala municipalities map visualization. 
 # Data should be indexed by a "municode" column containing municipalities codes.
 # The variable to plot should be named "values"
-gtmap_muni <- function(data, extra = NULL, depto_color = "#AAAAAA77", muni_color="#44554444") {
+gtmap_muni <- function(data, munis.2009 = FALSE, extra = NULL, 
+                       depto_color = "#AAAAAA77", muni_color="#44554444") {
+    if (munis.2009) {
+        # If this data is based on 2009 municipalities, expand the old municipalities into
+        # the new set of municipalities by an outer join with the municipalities data table.
+        data = data.table(merge(data, munisGT[, .(municode, parent_code = as.integer(parent_code))], 
+                     by.x = "municode", 
+                     by.y = "parent_code", all = T))[, .(municode = municode.y, values)]
+    }
+    
     gtmMunisDataCopy = cbind(gtmMunisIGN@data)
     gtmMunisIGN@data$id = rownames(gtmMunisIGN@data)
     gtmMunisIGN@data = merge(gtmMunisIGN@data, data, by.x = "COD_MUNI__", by.y="municode", all.x=T, sort=FALSE)

@@ -189,8 +189,8 @@ mapData = merge(IHMELocations[, .("municode" = factor(adm2_country_code), adm2_g
 mapData$values = cut(mapData$values_, c(0, 1, 5, 10, 25, 50, 100), right = F)
 #mapData$values = cut_number(mapData$values_, 5)
 mapData$year = 2016
-mapData$pop = GTMuniPopulation(as.integer(as.character(mapData$municode)), mapData$year)
-plot = gtmap_muni(mapData, depto_color = "#00000055", muni_color = "#AAAAAAAA")
+mapData$pop = GTMuniPopulation(as.integer(as.character(mapData$municode)), mapData$year, munis.2009 = T)
+plot = gtmap_muni(mapData, depto_color = "#00000055", muni_color = "#AAAAAAAA", munis.2009 = T)
 plot + labs(title="TB deaths counts by municipality \naccording to IHME corrected causes of death.") + 
     scale_fill_manual(values=c("#111129","#112255","#114466","#1256BA", "#6387CD", "#95DCEF"),  
                       na.value="#EFEFEF") 
@@ -253,10 +253,10 @@ tb_ts = rbind(INE_data[disease=="TB",
       IHME_deaths_collapsed[disease=="TB_all", 
                             .(count = sum(deaths), source="IHME"), 
                             by = . (year = year_id)])
-tb_ts[, pop := mapply(function (i)     sum(GTMuniPopulation(dt.munisGT$COD_MUNI__, rep(i, nrow(dt.munisGT))), na.rm = T), year) ]
+tb_ts[, pop := mapply(function (i)     sum(GTMuniPopulation(munisGT$municode, rep(i, nrow(munisGT))), na.rm = T), year) ]
 tb_ts[, goal := 0]
 tb_ts[, rate := count / pop]
-new_pop = sum(GTMuniPopulation(dt.munisGT$COD_MUNI__, rep(max(tb_ts$year), nrow(dt.munisGT))), na.rm = T)
+new_pop = sum(GTMuniPopulation(munisGT$municode, rep(max(tb_ts$year), nrow(munisGT))), na.rm = T)
 tb_ts = rbind(tb_ts, data.table( year = c(2016, 2016, 2017, 2017), 
                                  count = c(0,0,0,0),
                                  source = c("INE", "IHME", "INE", "IHME"),
