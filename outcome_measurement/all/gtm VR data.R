@@ -2,6 +2,7 @@
 library(data.table)
 library(ggplot2)
 library(haven)
+library(lme4)
 
 codePath = "PCE/gf/"
 
@@ -180,7 +181,7 @@ round(data.table(merge(dcast(IHME_deaths_collapsed[ sex_id == 2 & age_group_id >
 
 
 # Now the geographical differences:
-mapData = merge(IHMELocations[, .("municode" = factor(adm2_country_code), adm2_gbd_id)], 
+mapData = merge(IHMELocations[, .(municode = adm2_country_code, adm2_gbd_id)], 
                 IHME_deaths_collapsed[(year_id == 2016) &
                           (disease %in% c("TB_all")), 
                         .(values_ = sum(deaths)), 
@@ -189,14 +190,14 @@ mapData = merge(IHMELocations[, .("municode" = factor(adm2_country_code), adm2_g
 mapData$values = cut(mapData$values_, c(0, 1, 5, 10, 25, 50, 100), right = F)
 #mapData$values = cut_number(mapData$values_, 5)
 mapData$year = 2016
-mapData$pop = GTMuniPopulation(as.integer(as.character(mapData$municode)), mapData$year, munis.2009 = T)
+mapData$pop = GTMuniPopulation(mapData$municode, mapData$year, munis.2009 = T)
 plot = gtmap_muni(mapData, depto_color = "#00000055", muni_color = "#AAAAAAAA", munis.2009 = T)
 plot + labs(title="TB deaths counts by municipality \naccording to IHME corrected causes of death.") + 
     scale_fill_manual(values=c("#111129","#112255","#114466","#1256BA", "#6387CD", "#95DCEF"),  
                       na.value="#EFEFEF") 
 mapData$values = 100000 * mapData$values_ / mapData$pop
 mapData$values = cut(mapData$values, c(0,1, 5, 10, 25, 50, 100), right = F)
-plot = gtmap_muni(mapData, depto_color = "#00000055", muni_color = "#AAAAAAAA")
+plot = gtmap_muni(mapData, depto_color = "#00000055", muni_color = "#AAAAAAAA", munis.2009 = T)
 plot + 
 #    scale_fill_gradient2(na.value = "#444444", midpoint = 15,
 #             low = "black", mid="#314278", high="#99BAFF", name="Rate") + 
@@ -278,4 +279,42 @@ ggplot(data = tb_ts) +
     labs(title = "TB mortality rate (per 100,000 people) - National level", y="Rate", x= "Year")
 
 # ------Trends----------
-(IHME_deaths_collapsed, 
+depto_trends_ihme = merge(IHME_deaths_collapsed, IHMELocations[,.(adm2_country_code, adm2_gbd_id)],
+      by.x = "location_id", by.y = "adm2_gbd_id")[disease == "TB_all",
+    .(deaths = sum(deaths)),by = .(year = as.integer(year_id), deptocode = factor(floor(adm2_country_code/100)))]
+depto_trends_ihme$pop = GTDeptoPopulation(depto_trends_ihme$deptocode, depto_trends_ihme$year)
+depto_trends_ihme[,rate := 100000 * deaths/pop]
+
+depto_model_ihme = lm(log(rate) ~ factor(deptocode) + year:factor(deptocode), 
+                    data = depto_trends_ihme)
+summary(depto_model_ihme)
+# Explore with line charts
+# ggplot(data = depto_trends[deptocode %in% c(13:16)]) + geom_line(aes(year, deaths, color = deptocode)) + 
+#    scale_color_discrete()
+factores_ihme = grep("\\d\\d?\\:year$",names(coef(depto_model_ihme)))
+trends_ihme = data.frame(values_ = exp(coef(depto_model_ihme)[factores_ihme])-1, 
+                         deptocode = str_match( names(coef(depto_model_ihme))[factores_ihme], "(\\d\\d?)\\:year$" )[,2])
+trends_ihme$values = cut(trends_ihme$values_, c(0.5,0.1,0.05,0,-0.05,-0.1,-0.5))
+#trends$values = trends$values_
+gtmap_depto(trends_ihme) + scale_fill_manual(values=rev(c("#552211", "#664411","#AA6622", "#3377DD", "#55AAFF", "#88CCFF")), name="Rate trend", na.value = "#444444") + 
+    labs(title="Annual trend of TB mortality rate\nby department", subtitle = "Source: Corrected VR data from IHME.") 
+
+
+# With INE data:
+depto_trends_ine = INE_data[disease == "TB",
+                        .(deaths = sum(deaths)),
+                        by = .(year = as.integer(year), 
+                               deptocode = as.factor(floor(municode /100)) )]
+depto_model_ine$pop = GTDeptoPopulation(depto_model_ine$deptocode, depto_model_ine$year)
+depto_model_ine[,rate := 100000 * deaths/pop]
+
+depto_model_ine = lm(log(rate) ~ factor(deptocode) + year:factor(deptocode), 
+                      data = depto_model_ine)
+summary(depto_model_ine)
+factores_ine = grep("\\d\\d?\\:year$",names(coef(depto_model_ine)))
+trends_ine = data.frame(values_ = exp(coef(depto_model_ine)[factores_ine])-1, 
+                         deptocode = str_match( names(coef(depto_model_ine))[factores_ine], "(\\d\\d?)\\:year$" )[,2])
+trends_ine$values = cut(trends_ine$values_, c(0.5,0.1,0.05,0,-0.05,-0.1,-0.5))
+#trends$values = trends$values_
+gtmap_depto(trends_ine) + scale_fill_manual(values=rev(c("#552211", "#664411","#AA6622", "#3377DD", "#55AAFF", "#88CCFF")), name="Rate trend", na.value = "#444444") + 
+    labs(title="Annual trend of TB mortality rate\nby department", subtitle = "Source: Uncorrected VR data from INE.") 
