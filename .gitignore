@@ -20,3 +20,4 @@ missing data malaria deaths.png
 missing data yahuma.png
 outcome_measurement/malaria/gtm/master_gtm_prep.R
 *.png
+.ipynb_checkpoints
