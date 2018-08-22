@@ -187,23 +187,33 @@ mapData = merge(IHMELocations[, .(municode = adm2_country_code, adm2_gbd_id)],
                         .(values_ = sum(deaths)), 
                         by = .(location_id)],
                  by.x = "adm2_gbd_id", by.y="location_id")
-mapData$values = cut(mapData$values_, c(0, 1, 5, 10, 25, 50, 100), right = F)
+mapData$values = cut(mapData$values_, c(0, 1, 5, 10, 25, 50, 100), 
+                     labels = c("0 to 1", "1 to 5", "5 to 10", "10 to 25", "25 to 50", "50 to 100"),
+                     right = F)
 #mapData$values = cut_number(mapData$values_, 5)
 mapData$year = 2016
 mapData$pop = GTMuniPopulation(mapData$municode, mapData$year, munis.2009 = T)
 plot = gtmap_muni(mapData, depto_color = "#00000055", muni_color = "#AAAAAAAA", munis.2009 = T)
-plot + labs(title="TB deaths counts by municipality \naccording to IHME corrected causes of death.") + 
-    scale_fill_manual(values=c("#111129","#112255","#114466","#1256BA", "#6387CD", "#95DCEF"),  
-                      na.value="#EFEFEF") 
+plot + labs(title="TB deaths counts by municipality \naccording to GBD corrected causes of death.") + 
+    scale_fill_manual(values=c("#FFFFFF","#BADFF5", "#86D0E0", "#60A8D9", "#4077D0"),  
+                      na.value="#EFEFEF") +
+    theme(legend.text=element_text(size=16), legend.title  = element_text(size=16), 
+          title = element_text(size=16) 
+    ) 
 mapData$values = 100000 * mapData$values_ / mapData$pop
-mapData$values = cut(mapData$values, c(0,1, 5, 10, 25, 50, 100), right = F)
+mapData$values = cut(mapData$values, c(0,1, 5, 10, 25, 50, 100), 
+                     labels = c("0 to 1", "1 to 5", "5 to 10", "10 to 25", "25 to 50", "50 to 100"),
+                     right = F)
 plot = gtmap_muni(mapData, depto_color = "#00000055", muni_color = "#AAAAAAAA", munis.2009 = T)
 plot + 
 #    scale_fill_gradient2(na.value = "#444444", midpoint = 15,
 #             low = "black", mid="#314278", high="#99BAFF", name="Rate") + 
-    scale_fill_manual(values=c("#111129","#112255","#114466","#1256BA", "#6387CD", "#95DCEF"),  
+    scale_fill_manual(values=c("#FFFFFF","#BADFF5", "#86D0E0", "#60A8D9", "#4077D0", "#3047A0"),  
                       na.value="#EFEFEF") + 
-    labs(title="TB Mortality Rate per 100,000 population\naccording to IHME corrected causes of death")
+    labs(title="TB 2016 Mortality Rate per 100,000 population\naccording to IHME corrected causes of death") +
+    theme(legend.text=element_text(size=16), legend.title  = element_text(size=16), 
+          title = element_text(size=16) 
+    ) 
 
 ineMapData = INE_data[disease %in% c("TB") & (year == 2016),.(values_ = sum(deaths)), by = .(municode)]
 mapData = ineMapData

@@ -170,7 +170,10 @@ gtmap_depto <- function(data, extra = NULL) {
     gtmDeptosIGN.map.df = fortify(gtmDeptosIGN)
     
     plot = ggplot(data=gtmDeptosIGN@data, aes(fill=values)) + 
-        geom_map(aes(map_id=id), colour = "#44554444", map = gtmDeptosIGN.map.df) + expand_limits(x = gtmDeptosIGN.map.df$long, y = gtmDeptosIGN.map.df$lat) + coord_quickmap() + theme_void()
+        geom_map(aes(map_id=id), color = "#444444EE", map = gtmDeptosIGN.map.df) +  
+        expand_limits(x = gtmDeptosIGN.map.df$long, y = gtmDeptosIGN.map.df$lat) + 
+        coord_quickmap() + theme_void()
+        
     if (!is.null(extra)) {
         plot = plot + extra
         print( "added extra options")
