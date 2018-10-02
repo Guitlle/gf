@@ -1,5 +1,8 @@
 from GT_load_data import munisGT, munisGT_2009
 import numpy as np
+import pandas as pd
+
+
 # ----------Population-------------------
 # After doing some math with the exponential growth equation, I have got these:
 # P_0 = (A-B)/(d*A) ^ ( Y_A / (Y_A-1) )
@@ -30,7 +33,7 @@ def GTMuniPopulation(code, year, _2009 = False):
         temp = popData.P_12_15.multiply(np.exp(popData.k_12_15.multiply(year)))
     else:
         temp = popData.P_10_12.multiply(np.exp(popData.k_10_12.multiply(year)))
-    return pd.DataFrame(index=munisGT.municode, data = {"population_projection": b.values}).loc[code]
+    return pd.DataFrame(index=munisGT.municode, data = {"population_projection": temp.values}).loc[code]
         
 # TEST:
 # GTMuniPopulation([101,102,103], 2008)
@@ -39,3 +42,17 @@ def GTMuniPopulation(code, year, _2009 = False):
 #    102      87706.381533
 #    103      67726.392444
 
+def GTDeptoPopulation(code, year, _2009 = False):
+    if _2009:
+        popData = munisGT_2009 
+    else:
+        popData = munisGT
+    if year > 2012:
+        temp = popData.P_12_15.multiply(np.exp(popData.k_12_15.multiply(year)))
+    else:
+        temp = popData.P_10_12.multiply(np.exp(popData.k_10_12.multiply(year)))
+    return pd.DataFrame(data = {"municode": munisGT.municode,
+                                "population_projection": temp.values})\
+            .assign(deptocode = lambda x: np.floor(x.municode/100)).groupby("deptocode")\
+            .population_projection.sum(skipna=True).loc[code]
+        
