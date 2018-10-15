@@ -56,3 +56,9 @@ def GTDeptoPopulation(code, year, _2009 = False):
             .assign(deptocode = lambda x: np.floor(x.municode/100)).groupby("deptocode")\
             .population_projection.sum(skipna=True).loc[code]
         
+    
+def abbreviate(i):
+    """ Makes an abbreviation of a string
+        
+    """
+    return i[0:3] + i[3:].replace("a", "").replace("e", "").replace("i", "").replace("o", "").replace("u", "")[0:3]
