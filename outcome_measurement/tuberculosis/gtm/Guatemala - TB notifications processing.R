@@ -26,7 +26,7 @@ source(paste0(codePath, "core/GT_helper_functions.R"), encoding = "UTF-8")
 tbnots = read.csv("PCE/Outcome Measurement Data/TUBERCULOSIS/GTM - TB notifications 2012-2017.csv")
 
 tbnots = data.table(tbnots)
-
+table(tbnots$CONTACTOS, tbnots$YEAR)
 
 tbnots[, .N, by = .(YEAR, PACIENTEPRIVADOLIBERTAD)]
 tbnots[, .N, by = .(YEAR, CAUSADEMUERTE)]
@@ -46,7 +46,7 @@ ggplot(data = tbnots[CONDICIONINGRESO %in% c("nuevo", "fracaso", "recaida", "aba
 tbnots[CONDICIONINGRESO %in% c("nuevo", "fracaso", "recaida", "abandono recuperado", "abandono recuperada"),
        .(Count = .N),
        by=.(YearMonth = floor(YearMonth/100)*100)]
-table(tbnots$CONDICIONINGRESO, tbnots$YEAR)
+table(tbnots$CONDICIONINGRESO, tbnots$YEAR, useNA = "always")
 table(tbnots$YEAR)
 table(tbnots[CONDICIONINGRESO %in% c("nuevo", "fracaso", "recaida",
                                      "abandono recuperado", "abandono recuperada")]$CLASIFICACION)
@@ -66,13 +66,42 @@ ggplot(data = tbnots[CONDICIONINGRESO == "nuevo", .(AgeGroup = ceiling(EDAD/5)*5
     geom_violin(aes(factor(YEAR), AgeGroup), fill="blue")  + labs(title="Age distribution of new cases by year")
 ggplot(data = tbnots[CONDICIONINGRESO == "nuevo", .(Count=.N), by= .(YEAR) ]) +
     geom_col(aes(factor(YEAR), Count), fill="blue")  + labs(title="New cases by year")
+extramuros = tbnots[ str_detect(str_to_lower(CLASIFICACION), "posit")==T & 
+             COD_DEPT%in%c(9,12,1,10,19,5,11,18) & CONDICIONINGRESO == "nuevo", .(Count=.N), by= .(YEAR) ]
+extramuros$Contribution = factor("Health services", c("Outreach", "Health services"))
+extramuros[YEAR==2017, Count:=Count-132]
+extramuros = rbind(extramuros, list(2017,132,"Outreach"))
+ggplot(data = extramuros) +
+    geom_col(aes(factor(YEAR), Count,  fill=Contribution)) +
+    scale_fill_manual(values=c("#4499FF", "#75CF56"), name="")+ 
+    labs(x="", y="TB Notifications", title="Outreach contribution in prioritized departments" ) 
+
+# Genexpert
+table(str_detect(str_to_lower(tbnots$METODODX), "xpert"))
+ggplot(data = tbnots[str_detect(str_to_lower(METODODX), "xpert")==T,
+    .(Count = .N), by= .(YEAR)]) + geom_col(aes(factor(YEAR), Count), fill="blue") + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8))
+dcast(tbnots[str_detect(str_to_lower(METODODX), "xpert"), .(Count=.N), by = .(UNIDADDX, COD_DEPT)], 
+      COD_DEPT~UNIDADDX, sum)
+
+genexpert = tbnots[str_detect(str_to_lower(METODODX), "xpert")==T,
+       .(Count = .N), by= .(VIH, EDAD=ceiling(EDAD/10)*10, SEXO, COD_DEPT, YEAR )]
+write.csv(genexpert, "/tmp/genexpert.csv")
+dcast(genexpert, COD_DEPT~YEAR, sum)
+
+# HIV counts
+dcast.data.table(tbnots[CONDICIONINGRESO %in% c(NA, "nuevo", "recaida")  & !(CONTACTOS %in% c("quimio")),.(Count = .N),
+       by=.(Year = floor(YearMonth/100), VIH)], Year~VIH, fun.aggregate = sum)
+# Age counts
+dcast.data.table(tbnots[CONDICIONINGRESO %in% c(NA, "nuevo", "recaida")  & !(CONTACTOS %in% c("quimio")),.(Count = .N),
+            by=.(Year = floor(YearMonth/100), EDAD = ceiling(EDAD/10)*10 )], EDAD~Year, fun.aggregate = sum)
 
 # Incidence time series:
-yearly = tbnots[CONDICIONINGRESO %in% c(NA, "nuevo")  & !(CONTACTOS %in% c("quimio")),.(Count = .N),
+yearly = tbnots[CONDICIONINGRESO %in% c(NA, "nuevo", "recaida")  & !(CONTACTOS %in% c("quimio")),.(Count = .N),
        by=.(Year = floor(YearMonth/100))]
 
-yearly$Pop = sapply(2012:2017, function (i)     sum(GTMuniPopulation(dt.munisGT$COD_MUNI__, 
-                                    rep(i, nrow(dt.munisGT))), na.rm = T))
+yearly$Pop = sapply(yearly$Year, function (i)     sum(GTMuniPopulation(munisGT$municode, 
+                                    rep(i, nrow(munisGT))), na.rm = T))
 
 yearly[,Incidence := 100000*Count/Pop]
 ggplot(data=yearly) + geom_line(aes(Year, Incidence)) + ylim(0,40) + labs(title = "Guatemala TB incidence rate per 100,000 people\nby year")

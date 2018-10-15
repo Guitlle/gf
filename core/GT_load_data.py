@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import geopandas as gp
 
 munisGT = pd.read_csv("../../Covariates and Other Data/Demographics/Guatemala_Municipios_IGN2017_worldpop2010-2012-2015.csv", index_col = None)
 # There are two municipalities that are actually one. To handle this unique case I am making the
@@ -43,3 +44,8 @@ munisGT_2009 = munisGT.groupby("parent_code").agg({
 munisGT_2009.rename(columns = {
     "parent_code": "municode"
 }, inplace = True)
+
+deptosGTshp = gp.read_file("../../Covariates and Other Data/GIS/GT-IGN-cartografia_basica-Departamentos.geojson")
+deptosGTshp = deptosGTshp[lambda x: x.CODIGO.astype(int) <= 2200]
+
+munisGTshp = gp.read_file("../../Covariates and Other Data/GIS/GT-IGN-cartografia_basica-Division politica Administrativa (Municipios).geojson")
