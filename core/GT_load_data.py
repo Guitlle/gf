@@ -47,5 +47,5 @@ munisGT_2009.rename(columns = {
 
 deptosGTshp = gp.read_file("../../Covariates and Other Data/GIS/GT-IGN-cartografia_basica-Departamentos.geojson")
 deptosGTshp = deptosGTshp[lambda x: x.CODIGO.astype(int) <= 2200]
-deptosGTshp["deptocode"] = (data.deptosGTshp.CODIGO.astype(int)/100).astype(int)
+deptosGTshp["deptocode"] = (deptosGTshp.CODIGO.astype(int)/100).astype(int)
 munisGTshp = gp.read_file("../../Covariates and Other Data/GIS/GT-IGN-cartografia_basica-Division politica Administrativa (Municipios).geojson")
