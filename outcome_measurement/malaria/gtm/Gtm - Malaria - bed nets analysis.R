@@ -33,15 +33,34 @@ datmalaria$bednetsLagSem_1_n = datmalaria$bednetsLagSem_1/1000
 summary(datmalaria$bednetsLagSem_1_n)
 
 datmalaria$semindex_g = factor(datmalaria$semindex)
-model = glmer(Notifs ~ 1 + factor(Year) + factor(Semester) + 
+model1 = glmer(Notifs ~ 1 + factor(Year) + factor(Semester) + 
                   bednetsLagSem_1_n+notifsLagYear_1_n + 
                   (1+bednetsLagSem_1_n+notifsLagYear_1_n|deptocode) # + (1|deptocode:semindex_g)
                 , 
             data = datmalaria[(datmalaria$semindex %in% c(5,6,7,8)), ],
             family=poisson)
-summary(model)
+summary(model1)
 
 #---------------- IHME ----------------
-/*
-    
-    */
+# I tried the previous model but it couldnt converge and recommended to rescale covariates.
+model = glmer.nb(Notifs ~ 1 + factor(Year) + factor(Semester) + 
+                  bednetsLagSem_1_n+notifsLagYear_1_n + 
+                  (1+bednetsLagSem_1_n+notifsLagYear_1_n|deptocode) # + (1|deptocode:semindex_g)
+              , 
+              data = datmalaria[(datmalaria$semindex %in% c(5,6,7,8)), ])
+summary(model)
+
+# Rescaled and removed lagged random fx. 
+datmalaria$notifsLagSem_1_n_log10 = log10(datmalaria$notifsLagSem_1+1)
+datmalaria$notifsLagSem_2_n_log10 = log10(datmalaria$notifsLagSem_2+1)
+datmalaria$bednetsLagSem_1_n_log10 = log10(datmalaria$bednetsLagSem_1 + 1)  
+datmalaria$bednetsLagSem_2_n_log10 = log10(datmalaria$bednetsLagSem_2 + 1)  
+model = glmer.nb(Notifs ~ 1  + factor(Year) + 
+                     bednetsLagSem_1_n_log10 + 
+                     (1 + factor(Year) + 
+                          bednetsLagSem_1_n_log10 |deptocode) # + (1|deptocode:semindex_g)
+                 , 
+                 data = datmalaria[(datmalaria$semindex %in% c(5,6,7,8)), ])
+summary(model)
+warnings()
+#datmalaria[datmalaria$deptocode == 5, ]
