@@ -17,7 +17,7 @@ library(data.table)
 # by name and returns its numerical code.
 deptosGT             = unique(munisGT[, c("deptoname", "deptocode") ])
 vocalesTildes        = c("á"="a", "é"="e", "í"="i", "ó"= "o", "ú"="u")
-deptosGT$lookupDepto = str_replace_all(str_to_lower(deptosGT$DEPTO__), vocalesTildes)
+deptosGT[, lookupDepto := str_replace_all(str_to_lower(deptoname), vocalesTildes)]
 munisGT$lookupMuni   = str_replace_all(str_to_lower(munisGT$name), vocalesTildes)
 
 deptoNameToCodeCache  = data.frame(original_name = character(), clean_name = character(), code  = integer(), stringsAsFactors = FALSE)
@@ -59,6 +59,7 @@ getMuniCodeByName <- function (nombreMuni_, nombreDepto_, field = "COD_MUNI__") 
     muni
 }
 
+
 getDeptoCodeByName <- function (nombreDepto_) {
     if (is.na(nombreDepto_)) {
         warning(paste("Found an NA in department input"))
@@ -66,12 +67,10 @@ getDeptoCodeByName <- function (nombreDepto_) {
     }
     else {
         nombreDepto = str_replace_all( str_to_lower(nombreDepto_), vocalesTildes)
-        
         deptoCache = deptoNameToCodeCache[deptoNameToCodeCache$clean_name == nombreDepto, "code"]
-        
         if (length(deptoCache)==0) {
             depto       = deptosGT[which.min(stringdist(nombreDepto, deptosGT$lookupDepto, method = "cosine")),]
-            depto       = depto$COD_DEPT__
+            depto       = depto$deptocode
             deptoNameToCodeCache[nrow(deptoNameToCodeCache)+1,] <<- list(original_name = nombreDepto_, clean_name = nombreDepto, code  = depto)
         }
         else {
