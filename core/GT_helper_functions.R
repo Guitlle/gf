@@ -23,6 +23,20 @@ munisGT$lookupMuni   = str_replace_all(str_to_lower(munisGT$name), vocalesTildes
 deptoNameToCodeCache  = data.frame(original_name = character(), clean_name = character(), code  = integer(), stringsAsFactors = FALSE)
 muniNameToCodeCache  = data.frame(original_name = character(), clean_name = character(), depto_orig_name = character(), depto_code = integer(), code  = integer(), stringsAsFactors = FALSE)
 
+if (exists("ignoreCache") == F) {
+	tryCatch( {
+			deptoNameToCodeCache = read.csv(paste0(codePath, "core/deptoNameToCodeCache.csv"))
+		}, 
+		error = function () {
+				print("No se pudo cargar cache de conversion de departamentos a codigos")
+			})
+	tryCatch({
+			muniNameToCodeCache = read.csv(paste0(codePath, "core/muniNameToCodeCache.csv"))
+		}, 
+		error = function (error) {
+				print("No se pudo cargar cache de conversion de municipios a codigos")
+			})
+}
 
 
 getMuniCodeByName <- function (nombreMuni_, nombreDepto_, field = "COD_MUNI__") {

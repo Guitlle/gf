@@ -166,7 +166,7 @@ names(TBNotif2018) = c("ID", "X1", "DAS", "DISTRITO", "SERVICIODESALUD", "X2", "
                        "CONDICIONEGRESO", "FECHAEGRESO", "OBSERVACIONES")
 TBContactos2018 = read_excel(paste0(dataPath, "Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/NOTIFICACIONES TB Jun 2018.xlsx"), sheet = 3, col_names = F)
 tempcols = colnames(TBContactos2018)
-TBContactos2018 = data.table(TBContactos2018)[2:.N, ][!is.na(get(tempcols[3])),]
+TBContactos2018 = data.table(TBContactos2018)[2:.N, 1:39][!is.na(get(tempcols[3])),]
 names(TBContactos2018) = c("ID", "X1", "DAS", "DISTRITO", "SERVICIODESALUD", "PRIORIZACION", "X2", "X3", 
                            "EDAD", "SEXO", "PESOLB", "EDUCACION", "PUEBLO", "OCUPACION", "MIGRACION", 
                            "CONDICIONPX", "CAUSAMUERTE", "FECHANOTIFICACION", "MESNOTIFICACION", "FECHADX", 
@@ -177,7 +177,7 @@ names(TBContactos2018) = c("ID", "X1", "DAS", "DISTRITO", "SERVICIODESALUD", "PR
 TBContactos2018[,DBCATEGORY:="QUIMIO"]
 TBMDR2018 = read_excel(paste0(dataPath, "Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/NOTIFICACIONES TB Jun 2018.xlsx"), sheet = 4, col_names = F)
 tempcols = colnames(TBMDR2018)
-TBMDR2018 = data.table(TBMDR2018)[6:.N, ][!is.na(get(tempcols[5])),]
+TBMDR2018 = data.table(TBMDR2018)[6:.N, 1:15][!is.na(get(tempcols[5])),]
 names(TBMDR2018) = c("ID", "X1", "X2", "MUNICIPIO", "DEPARTAMENTO", "SERVICIODESALUD", "SEXO", "EDAD", "CONDICIONINGRESO", "FECHANOTIFICACION", "FECHAINICIOTX", "METODODX", "RESISTENCIA", "FECHAPDS", "FECHARESULTADOPDS")
 TBMDR2018[,DBCATEGORY:="MDR"]
 TBNotif2018 = rbind(TBNotif2018, TBContactos2018, TBMDR2018, fill=T)
@@ -249,13 +249,20 @@ TBNotifAll[, DEPTO_CORRECTED := ifelse(is.na(DEPARTAMENTO) || (DEPARTAMENTO=="ND
                                                "\\s*(sur|norte|nor|central)\\s*(oriente|occidente)?\\s*", ""),
                                            "(quich(e|é))?\\s*(ixcan|ixcán|ixil)", "quiche"),
                                        DEPARTAMENTO), by=1:nrow(TBNotifAll)]
+
 TBNotifAll[, COD_DEPT := getDeptoCodeByName(DEPTO_CORRECTED), by=1:nrow(TBNotifAll)]
 
+table(TBNotifAll$YearMonth)
 # Produce a unified dataset with all years and columns:
 # Notifications
-write.csv(TBNotifAll[is.na(CONTACTOS),], "./PCE/Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/GTM - TB notifications 2012-Jun2018.csv")
+write.csv(TBNotifAll[is.na(CONTACTOS),], "./PCE/Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/GTM - TB notifications 2012-Sep2018.csv")
 # Contactos - Quimioprofilaxis
-write.csv(TBNotifAll[!is.na(CONTACTOS),], "./PCE/Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/GTM - TB quimio 2012-Jun2018.csv")
+write.csv(TBNotifAll[!is.na(CONTACTOS),], "./PCE/Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/GTM - TB quimio 2012-Sep2018.csv")
+
+write.csv(TBNotifAll[is.na(CONTACTOS),.(notificaciones = .N), by = .(YEAR, COD_DEPT)], "./PCE/Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/GTM - TB Notifications by Department and Year 2012-Sep2018.csv")
+
+
+
 
 TBNotifAll[CONTACTOS == "quimio", .N, by = YEAR]
 TBNotifAll[DBCATEGORY == "QUIMIO", .N, by = YEAR]
