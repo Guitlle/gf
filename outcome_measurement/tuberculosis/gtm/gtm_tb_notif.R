@@ -1,14 +1,19 @@
 
 
-
+library(data.table)
 library(ggplot2)
 
 rm(list=ls())
 
-notif<-read.csv("J:/Project/Evaluation/GF/outcome_measurement/gtm/TUBERCULOSIS/GTM - TB notifications 2012-2017 deidentified.csv")
+notif<-fread("J:/Project/Evaluation/GF/outcome_measurement/gtm/TUBERCULOSIS/GTM - TB notifications 2012-2017 deidentified.csv")
 
 table(notif$CONTACTOS)
-table(notif$CLASIFICACION)
+table(notif$CLASIFICACION, useNA = "always")
+table(notif$METODODX, useNA = "always")
+table(notif[,c('METODODX','CLASIFICACION')], useNA = "always")
+table(notif[,c('PACIENTEPRIVADOLIBERTAD', 'YEAR')], useNA = "always")
+
+
 notif<-notif[,c("MUNICIPIO","DEPARTAMENTO", "SEXO", "EDAD", "CONDICIONINGRESO", "CLASIFICACION", "YEAR", "VIH")]
 
 table(notif$YEAR)
@@ -16,7 +21,7 @@ table(notif$CONDICIONINGRESO)
 
 #Subset to new or relapsed cases or missing classification
 #Need data cleaning step to deal with the odd few numeric categories
-new<-notif[notif$CONDICIONINGRESO=="nuevo"|notif$CONDICIONINGRESO=="recaida"|is.na(notif$CONDICIONINGRESO),]
+new<-notif[notif$CONDICIONINGRESO=="nuevo"|notif$CONDICIONINGRESO=="recaida",]
 
 table(new$YEAR)
 

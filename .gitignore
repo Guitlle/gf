@@ -21,3 +21,5 @@ missing data yahuma.png
 outcome_measurement/malaria/gtm/master_gtm_prep.R
 *.png
 .ipynb_checkpoints
+outcome_measurement/all/cod/dhis_extraction/dhis_download_prep/prep_dhis.R
+outcome_measurement/all/cod/dhis_extraction/dhis_download_prep/prep_dhis.R
