@@ -3,15 +3,9 @@ import time
 import sys
 import os
 
-options = webdriver.ChromeOptions()
-options.headless = True
-# options.add_argument("download.default_directory="+os.getcwd())
-options.add_experimental_option("prefs", {
-  "download.default_directory": os.getcwd()+"\\..\\..\\..\\Resource Tracking\\SICOIN Scraped\\",
-  "download.prompt_for_download": False,
-})
-driver = webdriver.Chrome(chrome_options=options)
-driver.get('https://sicoin.minfin.gob.gt')
+# Put the folder were you have downloaded the chrome driver for selenium in the path variable, for instance:
+# Windows:  set PATH=%PATH%;C:\chromedriver_32
+# Linux:   export PATH=$PATH:~/chromedriver/
 
 def login(driver):
     user = driver.find_element_by_id("TxtUsuario")
@@ -39,7 +33,6 @@ def findHeading(driver):
 
 def setYear(driver, year):
     frames = driver.find_elements_by_tag_name("frame")
-    print(len(frames))
     driver.switch_to.frame(frames[0])
     try:
         preselector = driver.find_element_by_id("lblEjercicioActual")
@@ -47,8 +40,17 @@ def setYear(driver, year):
     except:
         pass
     selector = driver.find_element_by_id("ddlListaEjercicios")
-    selector.send_keys(str(year))
+    try:
+        ix = [x[-4:] for x in selector.get_attribute("innerHTML").split("</option>")].index(str(year))
+        
+    except:
+        print("Year not found " + year)
+        return False
+    selector.click()
+    selector.find_elements_by_tag_name("option")[ix].click()
     driver.switch_to.parent_frame()
+    return True
+
 
 def getReportGUI(driver, clicks_sequence):
     findHeading(driver)
@@ -63,7 +65,7 @@ def getReportGUI(driver, clicks_sequence):
     
 # Reports following a typical pattern found in SICOIN, where filters are set in an upper frame
 # while month option is put in the lower frame and then a form is submitted to download an excel file
-def reportTypeA(driver, clicks_sequence filters):
+def reportTypeA(driver, clicks_sequence, filters):
     getReportGUI(driver, clicks_sequence)
     findHeading(driver)
     pags = driver.find_element_by_id("paginas")
@@ -84,21 +86,5 @@ def reportTypeA(driver, clicks_sequence filters):
     driver.find_elements_by_name("opExport")[1].click()
     driver.find_element_by_id("sbtContinuar").click()
     driver.refresh()
+
     
-login(driver)
-setYear(driver, 2015)
-# Gestion por resultados report
-reportTypeA(driver,
-                     clicks_sequence = ["itemTextLink99", "itemTextLink102"], 
-                     [
-                        {
-                            "variable": "ENTIDAD",
-                            "operador": "igual",
-                            "valor"   : "11130009"
-                        },
-                        {
-                            "variable": "PROGRAMA",
-                            "operador": "igual",
-                            "valor"   : "17"
-                        }
-                     ])
