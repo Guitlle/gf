@@ -1,7 +1,7 @@
 from GT_load_data import munisGT, munisGT_2009
 import numpy as np
 import pandas as pd
-
+import scipy.stats as st
 
 # ----------Population-------------------
 # After doing some math with the exponential growth equation, I have got these:
@@ -62,3 +62,44 @@ def abbreviate(i):
         
     """
     return i[0:3] + i[3:].replace("a", "").replace("e", "").replace("i", "").replace("o", "").replace("u", "")[0:3]
+
+def plotBetaDistr(a,b):
+    x = np.linspace(0,1, 100)
+    plt.plot(x, st.beta.pdf(x, a,b)/st.beta.pdf(x, a,b).max() )
+    plt.plot(x, st.beta.cdf(x, a,b))
+    plt.vlines(st.beta.isf([0.025, 0.975], a,b), [0,0], [1,1])
+    
+def ratioBayesian(a,b, tol = 0.05):
+    phi1 = st.beta.isf(tol/2, a,b)/ (1-st.beta.isf(tol/2, a,b))
+    phi2 = st.beta.isf(1-tol/2, a,b)/ (1-st.beta.isf(1-tol/2, a,b))
+    return [a/b, phi1,phi2]
+
+def bernoulliBayesian(a,b, tol = 0.05):
+    ci = st.beta.isf([tol/2, 1-tol/2], a,b)
+    return [a/(a+b), ci[1], ci[0]]
+
+code2depto = {
+    5: "Escuintla",
+    16:"Alta Verapaz",
+    18: "Izabal",
+    10: "Suchitepéquez",
+    6: "Santa Rosa",
+    11: "Retalhuleu",
+    17: "Petén",
+    13: "Huehuetenango",
+    14: "Quiché",
+    15: "Baja Verapaz",
+    7: "Sololá",
+    8: "Totonicapán",
+    18: "Zacapa",
+    12: "San Marcos",
+    4: "Chimaltenango",
+    1: "Guatemala",
+    22: "Jutiapa",
+    20: "Chiquimula",
+    2: "El Progreso",
+    9: "Quetzaltenango",
+    3: "Sacatepequez",
+    21: "Jalapa",
+    19: "Zacapa"
+}
