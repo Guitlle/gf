@@ -16,7 +16,8 @@ library(data.table)
 # This function converts a string to a number. It tries to find a municipality 
 # by name and returns its numerical code.
 deptosGT             = unique(munisGT[, c("deptoname", "deptocode") ])
-vocalesTildes        = c("á"="a", "é"="e", "í"="i", "ó"= "o", "ú"="u")
+vocalesTildes        = c("á"="a", "é"="e", "í"="i", "ó"= "o", "ú"="u",
+                         "ù"="u", "à" = "a", "è"="e")
 deptosGT[, lookupDepto := str_replace_all(str_to_lower(deptoname), vocalesTildes)]
 munisGT$lookupMuni   = str_replace_all(str_to_lower(munisGT$name), vocalesTildes)
 
@@ -25,45 +26,40 @@ muniNameToCodeCache  = data.frame(original_name = character(), clean_name = char
 
 if (exists("ignoreCache") == F) {
 	tryCatch( {
-			deptoNameToCodeCache = read.csv(paste0(codePath, "core/deptoNameToCodeCache.csv"))
+			deptoNameToCodeCache = read.csv(paste0(codePath, "core/deptoNameToCodeCache.csv"), stringsAsFactors = FALSE)
+			deptoNameToCodeCache$code = as.integer(deptoNameToCodeCache$code)
 		}, 
 		error = function () {
 				print("No se pudo cargar cache de conversion de departamentos a codigos")
 			})
 	tryCatch({
-			muniNameToCodeCache = read.csv(paste0(codePath, "core/muniNameToCodeCache.csv"))
+			muniNameToCodeCache = read.csv(paste0(codePath, "core/muniNameToCodeCache.csv"), stringsAsFactors = FALSE)
 		}, 
 		error = function (error) {
 				print("No se pudo cargar cache de conversion de municipios a codigos")
 			})
 }
 
-
-getMuniCodeByName <- function (nombreMuni_, nombreDepto_, field = "COD_MUNI__") {
+getMuniCodeByName <- function (nombreMuni_, nombreDepto_, codDepto_, field = "municode") {
     if (is.na(nombreMuni_)) {
         warning(paste("Found an NA in municipality input nombreDepto was:", nombreDepto_))
         muni = 0
     }
     else {
-        nombreMuni  = str_replace_all(str_to_lower(nombreMuni_), vocalesTildes)
-        nombreDepto = str_replace_all( str_to_lower(nombreDepto_), vocalesTildes)
-        
-        deptoCache = deptoNameToCodeCache[deptoNameToCodeCache$clean_name == nombreDepto, "code"]
-        
-        if (length(deptoCache)==0) {
-            depto   = deptosGT[which.min(stringdist(nombreDepto, deptosGT$lookupDepto, method = "cosine")), "COD_DEPT__"]
-            deptoNameToCodeCache[nrow(deptoNameToCodeCache)+1,] <<- list(original_name = nombreDepto_, clean_name = nombreDepto, code  = depto)
+        nombreMuni  = str_replace_all(str_to_lower(str_trim(nombreMuni_)), vocalesTildes)
+        if (is.null(nombreDepto_) && !is.null(codDepto_)) { 
+            depto = codDepto_
         }
         else {
-            depto   = deptoCache[1]
+            depto = getDeptoCodeByName(nombreDepto_)
         }
         
         muniCache = muniNameToCodeCache[muniNameToCodeCache$clean_name == nombreMuni & muniNameToCodeCache$depto_code == depto, "code"]
         
         if (length(muniCache) == 0) {
             deptoMunis  = munisGT[munisGT$deptocode == depto,]
-            muni        = deptoMunis[which.min(stringdist(nombreMuni, deptoMunis$lookupMuni, method = "cosine")), field]
-            muniNameToCodeCache[nrow(muniNameToCodeCache)+1,] <<- list(original_name = nombreMuni_, clean_name = nombreMuni, depto_orig_name = nombreDepto_, code_depto  = depto, code = muni)
+            muni        = deptoMunis[which.min(stringdist(nombreMuni, lookupMuni, method = "cosine")), get(field)]
+            muniNameToCodeCache[nrow(muniNameToCodeCache)+1,] <<- c(nombreMuni_, nombreMuni, ifelse( is.null(nombreDepto_), "", nombreDepto_ ), depto, muni)
         }
         else {
             muni = muniCache
@@ -80,12 +76,12 @@ getDeptoCodeByName <- function (nombreDepto_) {
         depto = 0
     }
     else {
-        nombreDepto = str_replace_all( str_to_lower(nombreDepto_), vocalesTildes)
+        nombreDepto =  str_replace_all( str_to_lower(str_trim(nombreDepto_) ), vocalesTildes)
         deptoCache = deptoNameToCodeCache[deptoNameToCodeCache$clean_name == nombreDepto, "code"]
         if (length(deptoCache)==0) {
             depto       = deptosGT[which.min(stringdist(nombreDepto, deptosGT$lookupDepto, method = "cosine")),]
             depto       = depto$deptocode
-            deptoNameToCodeCache[nrow(deptoNameToCodeCache)+1,] <<- list(original_name = nombreDepto_, clean_name = nombreDepto, code  = depto)
+            deptoNameToCodeCache[nrow(deptoNameToCodeCache)+1,] <<- c(nombreDepto_, nombreDepto, depto)
         }
         else {
             depto = deptoCache
@@ -93,6 +89,14 @@ getDeptoCodeByName <- function (nombreDepto_) {
     }
     depto
 }
+
+saveMuniNameToCodeCache <- function () {
+    write.csv(muniNameToCodeCache, paste0(codePath, "core/muniNameToCodeCache.csv"), row.names = FALSE)
+}
+saveDeptoNameToCodeCache <- function () {
+    write.csv(deptoNameToCodeCache, paste0(codePath, "core/deptoNameToCodeCache.csv"), row.names = FALSE)
+}
+
 
 # ----------Population-------------------
 # After doing some math with the exponential growth equation, I have got these:
