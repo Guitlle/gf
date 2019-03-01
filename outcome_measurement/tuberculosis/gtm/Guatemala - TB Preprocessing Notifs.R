@@ -19,7 +19,7 @@ library(stringdist)
 # ----Configure------------------------------------------
 saveGraphs = T
 codePath = "PCE/gf/"
-
+dataPath = "PCE/"
 # Requirements:
 source(paste0(codePath, "core/GT_load_data.R"), encoding = "UTF-8")
 source(paste0(codePath, "core/GT_helper_functions.R"), encoding = "UTF-8")
@@ -236,12 +236,6 @@ table(ceiling(TBNotifAll[YearMonth%%100 <= 6, EDAD]/10)*10, TBNotifAll[YearMonth
 # Mujeres en edad reproductiva con TB
 TBNotifAll[CONDICIONINGRESO== "nuevo" & SEXO=="f" & EDAD>10 & EDAD<54 & YearMonth%%100<=6,.N,by=.(YEAR)]
 
-#TBNotifAll[, COD_MUNI := as.integer(getMuniCodeByName(ifelse(is.na(MUNICIPIO) || (MUNICIPIO=="ND"), 
-#               ifelse(is.na(SERVICIODESALUD) || (SERVICIODESALUD=="ND"), NA, SERVICIODESALUD), 
-#                 MUNICIPIO), 
-#               ifelse(is.na(DEPARTAMENTO) || (DEPARTAMENTO=="ND"), NA, DEPARTAMENTO))), 
-#           by=1:nrow(TBNotifAll)]
-
 TBNotifAll[, DEPTO_CORRECTED := ifelse(is.na(DEPARTAMENTO) || (DEPARTAMENTO=="ND"), 
                                        str_replace(
                                            str_replace(
@@ -249,20 +243,37 @@ TBNotifAll[, DEPTO_CORRECTED := ifelse(is.na(DEPARTAMENTO) || (DEPARTAMENTO=="ND
                                                "\\s*(sur|norte|nor|central)\\s*(oriente|occidente)?\\s*", ""),
                                            "(quich(e|é))?\\s*(ixcan|ixcán|ixil)", "quiche"),
                                        DEPARTAMENTO), by=1:nrow(TBNotifAll)]
-
+TBNotifAll[, COD_DEPT:=integer()]
 TBNotifAll[, COD_DEPT := getDeptoCodeByName(DEPTO_CORRECTED), by=1:nrow(TBNotifAll)]
+table(TBNotifAll$COD_DEPT, useNA = "ifany")
 
-table(TBNotifAll$YearMonth)
+TBNotifAll[, COD_MUNI := as.integer(
+    getMuniCodeByName(
+        ifelse(
+            is.na(MUNICIPIO) || (MUNICIPIO=="ND"), 
+            ifelse(is.na(SERVICIODESALUD) || (SERVICIODESALUD=="ND"), NA, str_replace(SERVICIODESALUD, "CS,", "") ), 
+            MUNICIPIO
+        ),
+       NULL, COD_DEPT 
+    ) ), 
+   by=1:nrow(TBNotifAll)]
+warnings()
+saveMuniNameToCodeCache()
 # Produce a unified dataset with all years and columns:
 # Notifications
 write.csv(TBNotifAll[is.na(CONTACTOS),], "./PCE/Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/GTM - TB notifications 2012-Sep2018.csv")
 # Contactos - Quimioprofilaxis
 write.csv(TBNotifAll[!is.na(CONTACTOS),], "./PCE/Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/GTM - TB quimio 2012-Sep2018.csv")
-
+# All notifications data:
+write.csv(TBNotifAll, "./PCE/Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/GTM - TB all notifications 2012-Sep2018.csv", row.names = FALSE)
+# By Month and Department
 write.csv(TBNotifAll[is.na(CONTACTOS),.(notificaciones = .N), by = .(YEAR, COD_DEPT)], "./PCE/Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/GTM - TB Notifications by Department and Year 2012-Sep2018.csv")
+# by Month by Municipality
+write.csv(TBNotifAll[is.na(CONTACTOS), .(NCases = .N, NInitiating = sum(as.integer(toupper(CONDICIONINGRESO) == "nuevo")) ), by = .(COD_MUNI, YearMonth, AgeRange = ceiling(EDAD/10), Gender = SEXO, HIV = VIH) ], file = paste0(dataPath, "Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/GTM - TB 2012-Jun2018 - MuniMonth.csv") )
 
-
-
+TBNotifAll[COD_MUNI==100,]
+temp = TBNotifAll[is.na(CONTACTOS), .(n=.N), by=.(YEAR, COD_MUNI)]
+dcast(temp, COD_MUNI~YEAR)
 
 TBNotifAll[CONTACTOS == "quimio", .N, by = YEAR]
 TBNotifAll[DBCATEGORY == "QUIMIO", .N, by = YEAR]
@@ -271,17 +282,13 @@ dcast(TBNotifAll[CONTACTOS == "quimio", .N, by = .(YEAR, EDAD <= 5)],
 
 table(TBNotifAll[, "QUIMIO_VIH"])
 
+
 ### CHECKPOINT
-TBNotifAll = read.csv("./PCE/Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/GTM - TB notifications 2012-Jun2018.csv")
+TBNotifAll = read.csv("./PCE/Outcome Measurement Data/TUBERCULOSIS/Notificaciones TB/GTM - TB notifications 2012-Sep2018.csv")
 TBNotifAll = data.table(TBNotifAll)
 
-# ----Month by Municipality table:---------------------------------
-
-# write.csv(table(TBNotifAll$YearMonth, TBNotifAll$COD_MUNI), file = paste0(dataPath, "Outcome Measurement Data/TUBERCULOSIS/MunicipalityMonth.csv") )
-
+# ----Month by Department table: --------------------------------
 write.csv(TBNotifAll[, .(NCases = .N, NInitiating = sum(as.integer(toupper(CONDICIONINGRESO) == "nuevo")) ), by = .(COD_DEPT, YearMonth, AgeRange = ceiling(EDAD/10), Gender = SEXO, HIV = VIH) ], file = paste0(dataPath, "Outcome Measurement Data/TUBERCULOSIS/GTM - TB 2012-2017 - DeptMonth.csv") )
-
-# TBNotifAll$RANGOEDAD = factor(TBNotifAll$RANGOEDAD, levels = order(unique(TBNotifAll$RANGOEDAD)))
 
 # --------Monthly Time Series--------------------------------------
 # Exploring
