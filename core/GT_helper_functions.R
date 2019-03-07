@@ -46,7 +46,7 @@ getMuniCodeByName <- function (nombreMuni_, nombreDepto_, codDepto_, field = "mu
         muni = 0
     }
     else {
-        nombreMuni  = str_replace_all(str_to_lower(str_trim(nombreMuni_)), vocalesTildes)
+        nombreMuni  = str_replace_all(str_to_lower(str_trim(as.character(nombreMuni_))), vocalesTildes)
         if (is.null(nombreDepto_) && !is.null(codDepto_)) { 
             depto = codDepto_
         }
@@ -70,21 +70,26 @@ getMuniCodeByName <- function (nombreMuni_, nombreDepto_, codDepto_, field = "mu
 }
 
 
-getDeptoCodeByName <- function (nombreDepto_) {
-    if (is.na(nombreDepto_)) {
+getDeptoCodeByName <- function (nombre) {
+    if (is.na(nombre)) {
         warning(paste("Found an NA in department input"))
         depto = 0
     }
     else {
-        nombreDepto =  str_replace_all( str_to_lower(str_trim(nombreDepto_) ), vocalesTildes)
-        deptoCache = deptoNameToCodeCache[deptoNameToCodeCache$clean_name == nombreDepto, "code"]
-        if (length(deptoCache)==0) {
-            depto       = deptosGT[which.min(stringdist(nombreDepto, deptosGT$lookupDepto, method = "cosine")),]
-            depto       = depto$deptocode
-            deptoNameToCodeCache[nrow(deptoNameToCodeCache)+1,] <<- c(nombreDepto_, nombreDepto, depto)
+        nombreDepto =  str_replace_all( str_to_lower(str_trim(as.character(nombre)) ), vocalesTildes)
+        if (str_length(nombreDepto)>0) {
+            deptoCache = deptoNameToCodeCache[deptoNameToCodeCache$clean_name == nombreDepto, "code"]
+            if (length(deptoCache)==0) {
+                depto       = deptosGT[which.min(stringdist(nombreDepto, deptosGT$lookupDepto, method = "cosine")),]
+                depto       = as.integer(depto$deptocode)
+                deptoNameToCodeCache[nrow(deptoNameToCodeCache)+1,] <<- c(nombre, nombreDepto, depto)
+            }
+            else {
+                depto = deptoCache
+            }
         }
         else {
-            depto = deptoCache
+            depto = 0
         }
     }
     depto
