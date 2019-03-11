@@ -1,40 +1,41 @@
-"","original_name","clean_name","code"
-"1","ALTA VERAPAZ","alta verapaz",16
-"2","BAJA VERAPAZ","baja verapaz",15
-"3","CHIMALTENANGO","chimaltenango",4
-"4","CHIQUIMULA","chiquimula",20
-"5","EL PROGRESO","el progreso",2
-"6","ESCUINTLA","escuintla",5
-"7","GUATEMALA","guatemala",1
-"8","HUEHUETENANGO","huehuetenango",13
-"9","QUICHE","quiche",14
-"10","IZABAL","izabal",18
-"11","JALAPA","jalapa",21
-"12","JUTIAPA","jutiapa",22
-"13","PETEN","peten",17
-"14","QUETZALTENANGO","quetzaltenango",9
-"15","RETALHULEU","retalhuleu",11
-"16","SACATEPEQUEZ","sacatepequez",3
-"17","SAN MARCOS","san marcos",12
-"18","SANTA ROSA","santa rosa",6
-"19","SOLOLA","solola",7
-"20","SUCHITEPEQUEZ","suchitepequez",10
-"21","TOTONICAPAN","totonicapan",8
-"22","ZACAPA","zacapa",19
-"23","CS, SAN RAFAEL","cs, san rafael",12
-"24","LIVINGSTON","livingston",4
-"25","PUERTO BARRIOS","puerto barrios",2
-"26","ESTOR","estor",2
-"27","AMATES","amates",1
-"28","MORALES","morales",2
-"29","PETEN ","peten ",17
-"30","GUATEMALA SUR","guatemala sur",1
-"31","mixco","mixco",20
-"32","retaluleu","retaluleu",11
-"33","guatemzala","guatemzala",1
-"34","ESCUINTLA ","escuintla ",5
-"35","MAZATENANGO","mazatenango",4
-"36","GUATEMALA CENTRAL","guatemala central",1
-"37","GUATEMALA NOR OCCIDENTE ","guatemala nor occidente ",4
-"38","GUATEMALA ","guatemala ",1
-"39","SAN MARCOS ","san marcos ",12
+"original_name","clean_name","code"
+"ALTA VERAPAZ","alta verapaz",16
+"BAJA VERAPAZ","baja verapaz",15
+"CHIMALTENANGO","chimaltenango",4
+"CHIQUIMULA","chiquimula",20
+"EL PROGRESO","el progreso",2
+"ESCUINTLA","escuintla",5
+"GUATEMALA","guatemala",1
+"HUEHUETENANGO","huehuetenango",13
+"QUICHE","quiche",14
+"IZABAL","izabal",18
+"JALAPA","jalapa",21
+"JUTIAPA","jutiapa",22
+"PETEN","peten",17
+"QUETZALTENANGO","quetzaltenango",9
+"RETALHULEU","retalhuleu",11
+"SACATEPEQUEZ","sacatepequez",3
+"SAN MARCOS","san marcos",12
+"SANTA ROSA","santa rosa",6
+"SOLOLA","solola",7
+"SUCHITEPEQUEZ","suchitepequez",10
+"TOTONICAPAN","totonicapan",8
+"ZACAPA","zacapa",19
+"CS, SAN RAFAEL","cs, san rafael",NA
+"LIVINGSTON","livingston",18
+"PUERTO BARRIOS","puerto barrios",18
+"ESTOR","estor",18
+"AMATES","amates",18
+"MORALES","morales",18
+"PETEN ","peten ",17
+"GUATEMALA SUR","guatemala sur",1
+"mixco","mixco",1
+"retaluleu","retaluleu",11
+"guatemzala","guatemzala",1
+"ESCUINTLA ","escuintla ",5
+"MAZATENANGO","mazatenango",10
+"GUATEMALA CENTRAL","guatemala central",1
+"GUATEMALA NOR OCCIDENTE ","guatemala nor occidente ",1
+"GUATEMALA ","guatemala ",1
+"SAN MARCOS ","san marcos ",12
+"Guatemala noroccidente","guatemala noroccidente",1

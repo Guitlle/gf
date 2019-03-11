@@ -16,10 +16,10 @@ library(haven)
 # ----Configure--------------------------------------------
 if (!'at_ciesar' %in% ls()) at_ciesar = 1 # parameter for who's running the code
 if (at_ciesar) { 
-	dataPath = "PCE/Covariates and Other Data/GIS/"
+	gisDataPath = "PCE/Covariates and Other Data/GIS/"
 	codePath = "PCE/gf/"
 } else { 
-	dataPath = "J:/Project/Evaluation/GF/mapping/gtm/"
+	gisDataPath = "J:/Project/Evaluation/GF/mapping/gtm/"
 	codePath = "C:/local/gf/"
 }
 extDataPath = "DATOS/"
@@ -53,16 +53,16 @@ loadPrivateHospitalAdmsData <- function() {
 
 
 # Municipalities and departments GIS geometries
-gtmMunisIGN = readOGR(paste0(dataPath, "GT-IGN-cartografia_basica-Division politica Administrativa (Municipios).geojson"))
+gtmMunisIGN = readOGR(paste0(gisDataPath, "GT-IGN-cartografia_basica-Division politica Administrativa (Municipios).geojson"))
 gtmMunisIGN = gtmMunisIGN[!(gtmMunisIGN$COD_MUNI__ %in% c("2000")), ]
 
-gtmDeptosIGN = readOGR(paste0(dataPath, "GT-IGN-cartografia_basica-Departamentos.geojson"), encoding = "UTF-8")
+gtmDeptosIGN = readOGR(paste0(gisDataPath, "GT-IGN-cartografia_basica-Departamentos.geojson"), encoding = "UTF-8")
 gtmDeptosIGN@data$CODIGO = floor(as.numeric(as.character(gtmDeptosIGN@data$CODIGO))/100)
 gtmDeptosIGN = gtmDeptosIGN[gtmDeptosIGN$CODIGO != 23,]
 # Municipalities data with population estimates for 2015.
 
-if (at_ciesar) munisGT = read.csv(paste0(dataPath, "../Demographics/Guatemala_Municipios_IGN2017_worldpop2010-2012-2015.csv"), encoding = "UTF-8")
-if (!at_ciesar) munisGT = read.csv(paste0(dataPath, "/Guatemala_Municipios_IGN2017_worldpop2010-2012-2015.csv"), encoding = "UTF-8")
+if (at_ciesar) munisGT = read.csv(paste0(gisDataPath, "../Demographics/Guatemala_Municipios_IGN2017_worldpop2010-2012-2015.csv"), encoding = "UTF-8")
+if (!at_ciesar) munisGT = read.csv(paste0(gisDataPath, "/Guatemala_Municipios_IGN2017_worldpop2010-2012-2015.csv"), encoding = "UTF-8")
 # TODO: The following comes from the merge. Should we keep it?
 dt.munisGT = data.table(munisGT)[, 
                                  .(NOMBRE__ = first(NOMBRE__), COD_MUNI__, first(COD_DEPT__),
