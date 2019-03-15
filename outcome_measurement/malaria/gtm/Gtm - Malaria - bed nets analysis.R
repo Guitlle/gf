@@ -1,20 +1,29 @@
-library("gee")
-
-
-datmalaria = read.csv("/tmp/malaria_gee.csv")
-datmalaria$Year_n = scale(datmalaria$Year) # (datmalaria$Year - mean(datmalaria$Year)) / var(datmalaria$Year)
-
-
-#datmalaria$Notifs = datmalaria$Notifs-1
-model.gee = gee(Notifs ~ 1+ Year_n + factor(Semester) + 
-                (notifsLagSem_1 + notifsLagSem_2  ) + 
-                (bednetsLagSem_1 + bednetsLagSem_2 + bednetsLagSem_3 + bednetsLagSem_4), 
-            data = datmalaria[datmalaria$semindex > 10 , ], 
-            id= deptocode, family=poisson,corstr = "unstructured")
-
-summary(model.gee)
-
+library(data.table)
 library(lme4)
+
+codePath = "PCE/gf/"
+
+# Requirements:
+source(paste0(codePath, "core/GT_load_data.R"), encoding = "UTF-8")
+source(paste0(codePath, "core/GT_helper_functions.R"), encoding = "UTF-8")
+
+datmalaria = read.csv("PCE/Outcome Measurement Data/MALARIA/Gtm Malaria impact analysis data.csv",
+                      row.names = 1)
+breeds = read.csv("PCE/Outcome Measurement Data/MALARIA/SIGSA 6m - Malaria production by depto - 2014-2017.csv", row.names = 1)
+
+
+# These departments should be included in the analysis given their amount of notifications
+# Other departments have very low counts.
+deptosGood = c(5, 6, 10,11,13, 14,16,17,18)
+
+#datmalaria$Year_n = scale(datmalaria$Year) # (datmalaria$Year - mean(datmalaria$Year)) / var(datmalaria$Year)
+#datmalaria$Notifs = datmalaria$Notifs-1
+#model.gee = gee(Notifs ~ 1+ Year_n + factor(Semester) + 
+#                (notifsLagSem_1 + notifsLagSem_2  ) + 
+#                (bednetsLagSem_1 + bednetsLagSem_2 + bednetsLagSem_3 + bednetsLagSem_4), 
+#            data = datmalaria[datmalaria$semindex > 10 , ], 
+#            id= deptocode, family=poisson,corstr = "unstructured")
+#summary(model.gee)
 
 datmalaria$notifsLagYear_1 = datmalaria$notifsLagSem_1 + datmalaria$notifsLagSem_2
 datmalaria$notifsLagYear_1_n = log(datmalaria$notifsLagYear_1+1)
@@ -34,6 +43,21 @@ datmalaria$bednetsLagSem_1_n = datmalaria$bednetsLagSem_1/1000
 summary(datmalaria$bednetsLagSem_1_n)
 datmalaria$semindex_g = factor(datmalaria$semindex)
 
+datmalaria$notifsLagSem_1_n_log10 = log10(datmalaria$notifsLagSem_1+1)
+datmalaria$notifsLagSem_2_n_log10 = log10(datmalaria$notifsLagSem_2+1)
+datmalaria$bednetsLagSem_1_n_log10 = log10(datmalaria$bednetsLagSem_1 + 1)  
+datmalaria$bednetsLagSem_2_n_log10 = log10(datmalaria$bednetsLagSem_2 + 1)  
+
+# Cum BN
+datmalaria$cumBN_n = datmalaria$cumBN/10000  #  log10(datmalaria$cumBN+1)
+datmalaria$cumBNLagSem_1_n =  datmalaria$cumBNLagSem_1/10000 # log10(datmalaria$cumBNLagSem_1+1)
+datmalaria$cumBNLagSem_2_n =  datmalaria$cumBNLagSem_2/10000  # log10(datmalaria$cumBNLagSem_2+1)
+
+datmalaria$cumBN_l10n = log10(datmalaria$cumBN+1)
+datmalaria$cumBNLagSem_1_l10n = log10(datmalaria$cumBNLagSem_1+1)
+datmalaria$cumBNLagSem_2_l10n = log10(datmalaria$cumBNLagSem_2+1)
+
+
 model1 = glmer(Notifs ~ 1 + factor(Year) + factor(Semester) + 
                    bednetsLagSem_1_n+notifsLagYear_1_n + 
                    (1+bednetsLagSem_1_n+notifsLagYear_1_n|deptocode) # + (1|deptocode:semindex_g)
@@ -51,12 +75,7 @@ model = glmer.nb(Notifs ~ 1 + factor(Year) + factor(Semester) +
                  data = datmalaria[(datmalaria$semindex %in% c(9,10,11,12)), ])
 summary(model)
 
-# Rescaled and removed lagged random fx. 
-datmalaria$notifsLagSem_1_n_log10 = log10(datmalaria$notifsLagSem_1+1)
-datmalaria$notifsLagSem_2_n_log10 = log10(datmalaria$notifsLagSem_2+1)
-datmalaria$bednetsLagSem_1_n_log10 = log10(datmalaria$bednetsLagSem_1 + 1)  
-datmalaria$bednetsLagSem_2_n_log10 = log10(datmalaria$bednetsLagSem_2 + 1)  
-
+# Transformed covs with log10 and removed lagged random fx. 
 model.nb = glmer.nb(Notifs ~ 1  + factor(Year) + 
                      bednetsLagSem_1_n_log10 + 
                      (1 + factor(Year) + 
@@ -67,17 +86,6 @@ summary(model.nb)
 warnings()
 #datmalaria[datmalaria$deptocode == 5, ]
 
-# good departments
-deptosGood = c(5, 6, 10,11,13, 14,16,17,18)
-
-# Cum BN
-datmalaria$cumBN_n = datmalaria$cumBN/10000  #  log10(datmalaria$cumBN+1)
-datmalaria$cumBNLagSem_1_n =  datmalaria$cumBNLagSem_1/10000 # log10(datmalaria$cumBNLagSem_1+1)
-datmalaria$cumBNLagSem_2_n =  datmalaria$cumBNLagSem_2/10000  # log10(datmalaria$cumBNLagSem_2+1)
-
-datmalaria$cumBN_n = log10(datmalaria$cumBN+1)
-datmalaria$cumBNLagSem_1_n = log10(datmalaria$cumBNLagSem_1+1)
-datmalaria$cumBNLagSem_2_n = log10(datmalaria$cumBNLagSem_2+1)
 
 
 model2 = glmer(Notifs ~ 1 + factor(Semester) + notifsLagYear_1_n +
@@ -211,3 +219,30 @@ library(nlme)
 # Check residuals vs predictor variables
 plot(residuals(model2) ~ datmalaria[(datmalaria$deptocode %in% deptosGood) & 
                                         (datmalaria$semindex %in% c(7,8,9,10,11,12,13)), "cumBNLagSem_2_n"])
+
+
+# ------- With other covariates --------------
+# Lag by 1 year
+breeds$AñoLag = breeds$Año+1
+breeds$txs_rociamiento = log10(1 + breeds$NRocdom)
+breeds$txs_criads = log10(1 + breeds$NTxAplicados)
+breeds$txs_crdcl = log10(1 + breeds$No..de.tratamientos.de.cura.radical)
+
+
+breeds$criaderos = log10(breeds$NTemp + breeds$NPerm + 1)
+
+datmalaria2 = merge(datmalaria, breeds, by.x = c("deptocode", "Year"), 
+                    by.y = c("Deptocode", "AñoLag"))
+
+
+model8 = glmer(Notifs ~ 1 + factor(Semester) + notifsLagYear_1_n +
+                   cumBNLagSem_1_n + criaderos + 
+                   txs_rociamiento + txs_crdcl + txs_criads + 
+                   (1 + notifsLagYear_1_n + criaderos | deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                     (datmalaria2$semindex %in% c(7,8,9,10,11,12,13)), ],
+               family=poisson,
+               control=glmerControl(optimizer="bobyqa"))
+summary(model8)
+
