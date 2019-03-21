@@ -1,3 +1,10 @@
+# --------------------------
+# Author: Guillermo Ambrosio
+# Date:  2019-03-05
+#
+# Preliminary analysis of bednets impact
+# Also some analysis of other interventions such as breeding sites treatment
+# --------------------------
 library(data.table)
 library(lme4)
 
@@ -223,7 +230,7 @@ plot(residuals(model2) ~ datmalaria[(datmalaria$deptocode %in% deptosGood) &
 
 # ------- With other covariates --------------
 # Lag by 1 year
-breeds$AñoLag = breeds$Año+1
+breeds$YearLag = breeds$Year+1
 breeds$txs_rociamiento = log10(1 + breeds$NRocdom)
 breeds$txs_criads = log10(1 + breeds$NTxAplicados)
 breeds$txs_crdcl = log10(1 + breeds$No..de.tratamientos.de.cura.radical)
@@ -231,18 +238,27 @@ breeds$txs_crdcl = log10(1 + breeds$No..de.tratamientos.de.cura.radical)
 
 breeds$criaderos = log10(breeds$NTemp + breeds$NPerm + 1)
 
-datmalaria2 = merge(datmalaria, breeds, by.x = c("deptocode", "Year"), 
-                    by.y = c("Deptocode", "AñoLag"))
+datmalaria2$ = merge(datmalaria, breeds$, by.x = c("deptocode", "Year"), 
+                    by.y = c("Deptocode", "YearLag"))
 
 
 model8 = glmer(Notifs ~ 1 + factor(Semester) + notifsLagYear_1_n +
-                   cumBNLagSem_1_n + criaderos + 
+                   cumBNLagSem_1_n + 
                    txs_rociamiento + txs_crdcl + txs_criads + 
-                   (1 + notifsLagYear_1_n + criaderos | deptocode)
+                   (1 + notifsLagYear_1_n  + cumBNLagSem_1_n + txs_rociamiento + txs_crdcl + txs_criads | deptocode)
                ,
                data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12,13)), ],
                family=poisson,
-               control=glmerControl(optimizer="bobyqa"))
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+                                    ))
 summary(model8)
+ranef(model8)
 
+
+require(RCurl)
+afurl <- "https://raw.githubusercontent.com/lme4/lme4/2f57ca5359d98461ce98fbfa8679b8308596101e/R/allFit.R"
+eval(parse(text=getURL(afurl)))
+
+af8 <- allFit(model8, verbose=T)
