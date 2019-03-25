@@ -5,7 +5,6 @@
 # Preliminary analysis of bednets impact
 # Also some analysis of other interventions such as breeding sites treatment
 # --------------------------
-install.packages("lme4")
 library(data.table)
 library(lme4)
 
@@ -14,6 +13,7 @@ codePath = "PCE/gf/"
 # Requirements:
 source(paste0(codePath, "core/GT_load_data.R"), encoding = "UTF-8")
 source(paste0(codePath, "core/GT_helper_functions.R"), encoding = "UTF-8")
+
 
 datmalaria = read.csv("PCE/Outcome Measurement Data/MALARIA/Gtm Malaria impact analysis data.csv",
                       row.names = 1)
@@ -37,11 +37,13 @@ datmalaria$cumBNLagSem_2_l10n = log10(datmalaria$cumBNLagSem_2+1)
 deptosGood = c(5, 6, 10,11,13, 14,16,17,18)
 # ------- With other covariates --------------
 # Lag by 1 year
-breeds$YearLag = breeds$Year+1
+breeds$YearB = breeds$Year
+breeds$Year = NULL
+breeds$YearLag = breeds$YearB+1
 breeds$txs_rociamiento = log10(1 + breeds$NRocdom)
 breeds$txs_criads = log10(1 + breeds$NTxAplicados)
 breeds$txs_crdcl = log10(1 + breeds$No..de.tratamientos.de.cura.radical)
-
+breeds$txs_criads2 = log10(1 + breeds$txs_crdcl + breeds$NTxAplicados)
 
 breeds$criaderos = log10(breeds$NTemp + breeds$NPerm + 1)
 
@@ -51,27 +53,44 @@ datmalaria2 = merge(datmalaria, breeds, by.x = c("deptocode", "Year"),
 table(datmalaria2$Year, datmalaria2$semindex)
 
 datmalaria2 = data.table(datmalaria2)
-datmalaria2[ deptocode == 10]
+datmalaria2[ deptocode == 5]
 
 model8 = glmer(Notifs ~ 
                    1 + factor(Semester) + notifsLagYear_1_n +
                    cumBNLagSem_1_n:factor(deptocode) + 
                    txs_rociamiento + 
-                   txs_crdcl + 
-                   txs_criads + 
-                   (1 + notifsLagYear_1_n  + 
+                   txs_criads2 + 
+                   (1 + factor(Semester) + notifsLagYear_1_n  + 
                         txs_rociamiento + 
-                        txs_crdcl + 
-                        txs_criads | deptocode)
+                        txs_criads2 | deptocode)
                ,
                data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
-                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12)), ],
+                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
                family=poisson,
                control=glmerControl(optimizer= "bobyqa",
                                     optCtrl  = list(maxfun=2e5)
                ))
 summary(model8)
 ranef(model8)
+
+model9 = glmer(Notifs ~ 
+                   1 + factor(Semester) + notifsLagYear_1_n +
+                   cumBNLagSem_1_n:factor(deptocode) + 
+                   txs_rociamiento + 
+                   txs_criads2 + 
+                   (1 + factor(Semester) + notifsLagYear_1_n  + 
+                        txs_rociamiento + 
+                        txs_criads2 | deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+summary(model9)
+ranef(model9)
+
 
 
 require(RCurl)
