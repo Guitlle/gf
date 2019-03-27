@@ -5,6 +5,7 @@
 # Preliminary analysis of bednets impact
 # Also some analysis of other interventions such as breeding sites treatment
 # --------------------------
+install.packages("lme4")
 library(data.table)
 library(lme4)
 
@@ -34,7 +35,7 @@ datmalaria$cumBNLagSem_2_l10n = log10(datmalaria$cumBNLagSem_2+1)
 
 # These departments should be included in the analysis given their amount of notifications
 # Other departments have very low counts.
-deptosGood = c(5, 6, 10,11,13, 14,16,17,18)
+deptosGood = c(5, 6, 10,11,13, 14,16,17,18, 15, 7)
 # ------- With other covariates --------------
 # Lag by 1 year
 breeds$YearB = breeds$Year
@@ -44,8 +45,10 @@ breeds$txs_rociamiento = log10(1 + breeds$NRocdom)
 breeds$txs_criads = log10(1 + breeds$NTxAplicados)
 breeds$txs_crdcl = log10(1 + breeds$No..de.tratamientos.de.cura.radical)
 breeds$txs_criads2 = log10(1 + breeds$txs_crdcl + breeds$NTxAplicados)
-
+breeds$diag_gg = log10(1 + breeds$NGG)
 breeds$criaderos = log10(breeds$NTemp + breeds$NPerm + 1)
+
+breeds = data.table(breeds)
 
 datmalaria2 = merge(datmalaria, breeds, by.x = c("deptocode", "Year"), 
                      by.y = c("Deptocode", "YearLag"))
@@ -53,10 +56,38 @@ datmalaria2 = merge(datmalaria, breeds, by.x = c("deptocode", "Year"),
 table(datmalaria2$Year, datmalaria2$semindex)
 
 datmalaria2 = data.table(datmalaria2)
-datmalaria2[ deptocode == 5]
+# mean notifications by department
+# Excluding departments with very low counts to avoid large influence in radical multiplicative change
+datmalaria2[, mean(Notifs) ,by=.(deptocode)][order(V1)]
+# Malaria testing by year:
+dcast(breeds[, sum(NGG) ,by=.(YearB, Deptocode)], Deptocode ~ YearB)
+# Notifs by year and depto
+dcast(datmalaria2[, sum(Notifs) ,by=.(Year, deptocode)], deptocode ~ Year)
+# Cum Bednets distr
+dcast(datmalaria2[, sum(cumBNLagSem_1) ,by=.(Year, deptocode)], deptocode ~ Year)
+# Bednets distr
+dcast(datmalaria2[, sum(bednetsLagSem_1) ,by=.(Year, deptocode)], deptocode ~ Year)
 
-model8 = glmer(Notifs ~ 
-                   1 + factor(Semester) + notifsLagYear_1_n +
+model1 = glmer(Notifs ~ 
+                   1 + notifsLagYear_1_n +
+                   cumBNLagSem_1_l10n:factor(deptocode) + 
+                   txs_rociamiento + 
+                   txs_criads2 + 
+                   (1 + factor(Semester) + notifsLagYear_1_n  + 
+                        txs_rociamiento + 
+                        txs_criads2 | deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+summary(model1)
+ranef(model1)
+
+model2 = glmer(Notifs ~ 
+                   1 +
                    cumBNLagSem_1_n:factor(deptocode) + 
                    txs_rociamiento + 
                    txs_criads2 + 
@@ -70,15 +101,15 @@ model8 = glmer(Notifs ~
                control=glmerControl(optimizer= "bobyqa",
                                     optCtrl  = list(maxfun=2e5)
                ))
-summary(model8)
-ranef(model8)
+summary(model2)
+ranef(model2)
 
-model9 = glmer(Notifs ~ 
+model3 = glmer(Notifs ~ 
                    1 + factor(Semester) + notifsLagYear_1_n +
                    cumBNLagSem_1_n:factor(deptocode) + 
                    txs_rociamiento + 
                    txs_criads2 + 
-                   (1 + factor(Semester) + notifsLagYear_1_n  + 
+                   (1 + factor(Semester)  + notifsLagYear_1_n  + 
                         txs_rociamiento + 
                         txs_criads2 | deptocode)
                ,
@@ -88,13 +119,218 @@ model9 = glmer(Notifs ~
                control=glmerControl(optimizer= "bobyqa",
                                     optCtrl  = list(maxfun=2e5)
                ))
-summary(model9)
-ranef(model9)
+summary(model3)
+AIC(model3) # 1079
+# Good alternative, but complains about singularity
+ranef(model3)
+
+model3b = glmer(Notifs ~ 
+                   1 + factor(Semester) + notifsLagYear_1_n +
+                    cumBNLagSem_1_n +
+                    txs_rociamiento + 
+                    txs_criads2 + 
+                   (1 + factor(Semester)  + notifsLagYear_1_n  +
+                        cumBNLagSem_1_n +
+                        txs_rociamiento + 
+                        txs_criads2 | deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+summary(model3b)
+AIC(model3b) # 1100
+# Correlation structure shows high relation between txs_criads2 and cumBednets lagged term
+ranef(model3b)
+
+model3c = glmer(Notifs ~ 
+                    1 + factor(Semester) + notifsLagYear_1_n +
+                    cumBNLagSem_1_n +
+                    txs_rociamiento + 
+                    txs_criads2 + 
+                    (1 + factor(Semester)  + notifsLagYear_1_n|deptocode)  +
+                    (-1 +
+                         cumBNLagSem_1_n +
+                         txs_rociamiento + 
+                         txs_criads2 | deptocode)
+                ,
+                data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                       (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+                family=poisson,
+                control=glmerControl(optimizer= "bobyqa",
+                                     optCtrl  = list(maxfun=2e5)
+                ))
+summary(model3c)
+AIC(model3c) # 1124, better AIC, but no department level effect, not singular +1
+ranef(model3c)
+exp(-0.11)
+
+model3d = glmer(Notifs ~ 
+                   1 + factor(Semester) + notifsLagYear_1_n +
+                   cumBNLagSem_1_n:factor(deptocode) + 
+                   txs_rociamiento + 
+                   txs_criads2 + 
+                   (1 + factor(Semester)  + notifsLagYear_1_n | deptocode)  + 
+                    (-1 + 
+                         txs_rociamiento + 
+                         txs_criads2 | deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+summary(model3d)
+AIC(model3d) # 1109 # Not singular :D 
+# Low correlations in random effects, lagged notifs effect makes sense (positive),
+# only negative effects in bednets
+ranef(model3d)
+
+# notifsLagYear_1_n, criaderos and diag_gg are too correlated (>0.9)
+# criaderos and txs_criads2 are also very correlated
+# diag_gg and txs_criads2 are too correlated
+# lagged notifications term is not strongly correlated with txs_criads2,
+# so I have decided to keep it and leave diag and criaderos out
+model4 = glmer(Notifs ~ 
+                   1 + factor(Semester) + notifsLagYear_1_n + 
+                   cumBNLagSem_1_l10n:factor(deptocode) + 
+                   txs_rociamiento + 
+                   txs_criads2 + 
+                   (1 + factor(Semester) + notifsLagYear_1_n + 
+                        txs_rociamiento + 
+                        txs_criads2 | deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+AIC(model4) # 1211.3
+# High correlations for txs_criads2
+summary(model4)
+ranef(model4)
+
+model4b = glmer(Notifs ~ 
+                   1 + factor(Semester) + notifsLagYear_1_n + 
+                   cumBNLagSem_1_l10n:factor(deptocode) + 
+                   txs_rociamiento + 
+                   txs_criads2 + 
+                   (1 + notifsLagYear_1_n +  
+                        txs_rociamiento + 
+                        txs_criads2 | deptocode)
+                   + (-1 + cumBNLagSem_1_l10n| deptocode:semindex)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+summary(model4b)
+ranef(model4b)
+AIC(model4b)
+# AIC 774
+# Bad model: All random effects show |correlation| = 1 
+
+model5 = glmer(Notifs ~ 
+                   1 + factor(Semester) + notifsLagYear_1_n + 
+                   cumBNLagSem_1_l10n + 
+                   txs_rociamiento + 
+                   txs_criads2 + 
+                   (1 + factor(Semester) + notifsLagYear_1_n | deptocode) +
+                   (cumBNLagSem_1_l10n - 1|Year:deptocode) +
+                   (    cumBNLagSem_1_l10n + 
+                        txs_rociamiento + 
+                        txs_criads2 - 1|deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+ranef(model5)
+summary(model5)
+AIC(model5) # 1050
+# Convergence problems
 
 
+model5b = glmer(Notifs ~ 
+                    1 + factor(Semester) + notifsLagYear_1_n + 
+                    cumBNLagSem_1_l10n:factor(deptocode) + 
+                    txs_rociamiento + 
+                    txs_criads2 + 
+                    (1 + factor(Semester) + notifsLagYear_1_n | deptocode) +
+                    (txs_rociamiento + 
+                         txs_criads2 + - 1|deptocode)
+                ,
+                data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                       (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+                family=poisson,
+                control=glmerControl(optimizer= "bobyqa",
+                                     optCtrl  = list(maxfun=2e5)
+                ))
+vcov(model5b)
+summary(model5b)
+ranef(model5b)
+# AIC 1237
+# Testing modeling uncorrelated random treatments effects
+# Seems ok, but lower AIC than model3. 
 
-require(RCurl)
-afurl <- "https://raw.githubusercontent.com/lme4/lme4/2f57ca5359d98461ce98fbfa8679b8308596101e/R/allFit.R"
-eval(parse(text=getURL(afurl)))
+model5c = glmer(Notifs ~ 
+                   1 + factor(Semester) + notifsLagYear_1_n + 
+                   cumBNLagSem_1_l10n:factor(deptocode) + 
+                   txs_rociamiento + 
+                   txs_criads2 + 
+                   (1 + factor(Semester) + notifsLagYear_1_n +
+                        txs_rociamiento + 
+                        txs_criads2 | deptocode) +
+                   (cumBNLagSem_1_l10n - 1|Year:deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+summary(model5c)
+ranef(model5c)
+AIC(model5c) # 1026, better than model3
+# Notifs lagged effect is negative, which does not match a priori assumption.
+# Very high correlations in alternative txs with lagged effect. Seems wrong.
 
-af8 <- allFit(model8, verbose=T)
+datmalaria2$is2018 = datmalaria2$Year == 2018
+model6 = glmer(Notifs ~ 
+                   1 + factor(Semester) + notifsLagYear_1_n + 
+                   cumBNLagSem_1_n:factor(deptocode) + 
+                   txs_rociamiento + 
+                   txs_criads2 + 
+                   (1 + factor(Semester) + notifsLagYear_1_n | deptocode) +
+                   (cumBNLagSem_1_n - 1|Year:deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+summary(model6)
+ranef(model6)
+
+AIC(model6)
+AIC(model4)
+AIC(model5)
+AIC(model5b)
+AIC(model3)
+
+# A profile of what interventions work best on each department:
+summary(model5)
+ranef(model5)
+
+# What does bednet fixed effect estimation looks like, with p-values and all:
+summary(model5b)
+ranef(model5b)
