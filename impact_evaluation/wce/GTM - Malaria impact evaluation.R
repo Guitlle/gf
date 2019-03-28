@@ -5,9 +5,10 @@
 # Preliminary analysis of bednets impact
 # Also some analysis of other interventions such as breeding sites treatment
 # --------------------------
-install.packages("lme4")
 library(data.table)
 library(lme4)
+install.packages("bootMer")
+library(bootMer)
 
 codePath = "PCE/gf/"
 
@@ -63,6 +64,7 @@ datmalaria2[, mean(Notifs) ,by=.(deptocode)][order(V1)]
 dcast(breeds[, sum(NGG) ,by=.(YearB, Deptocode)], Deptocode ~ YearB)
 # Notifs by year and depto
 dcast(datmalaria2[, sum(Notifs) ,by=.(Year, deptocode)], deptocode ~ Year)
+datmalaria2[, sum(Notifs) ,by=.(Year)]
 # Cum Bednets distr
 dcast(datmalaria2[, sum(cumBNLagSem_1) ,by=.(Year, deptocode)], deptocode ~ Year)
 # Bednets distr
@@ -85,6 +87,7 @@ model1 = glmer(Notifs ~
                ))
 summary(model1)
 ranef(model1)
+AIC(model1)
 
 model2 = glmer(Notifs ~ 
                    1 +
@@ -164,8 +167,24 @@ model3c = glmer(Notifs ~
                 ))
 summary(model3c)
 AIC(model3c) # 1124, better AIC, but no department level effect, not singular +1
+# 1223 in windows R analysis run
 ranef(model3c)
-exp(-0.11)
+# Effect is 10% decrease in notifications, in general, pero 1K bednets distributed
+1-exp(-0.111)
+# Predict what would happen in 2018 if no bednets were delivered:
+datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                (datmalaria2$semindex %in% c(13,14)), .(Notifs, deptocode)]
+counterfactual18 = copy(datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                (datmalaria2$semindex %in% c(13,14)), ])
+counterfactual18[, Notifs_old := Notifs]
+counterfactual18[, cumBNLagSem_1_n := 0]
+predNotifs = predict(model3c,newdata=counterfactual18, type="link") 
+predFun <- function(fit) {
+    predict(fit,counterfactual18)
+}
+predNotifsCI <- bootMer(model3c,nsim=200,FUN=predFun,seed=101)
+counterfactual18[, Notifs_pred := round(exp(predNotifs), 1)] 
+counterfactual18[,.(Notifs_old, Notifs_pred, deptocode)]
 
 model3d = glmer(Notifs ~ 
                    1 + factor(Semester) + notifsLagYear_1_n +
@@ -188,8 +207,28 @@ AIC(model3d) # 1109 # Not singular :D
 # Low correlations in random effects, lagged notifs effect makes sense (positive),
 # only negative effects in bednets
 ranef(model3d)
+fixef(model3d)
 
-# notifsLagYear_1_n, criaderos and diag_gg are too correlated (>0.9)
+model3e = glmer(Notifs ~ 
+                    1 + factor(Semester) + notifsLagYear_1_n +
+                    cumBNLagSem_1_n*txs_criads2 + 
+                    txs_rociamiento + 
+                    (1 + factor(Semester)  + notifsLagYear_1_n | deptocode)  + 
+                    (-1 + cumBNLagSem_1_n*txs_criads2 + 
+                         txs_rociamiento | deptocode)
+                ,
+                data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                       (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+                family=poisson,
+                control=glmerControl(optimizer= "bobyqa",
+                                     optCtrl  = list(maxfun=2e5)
+                ))
+summary(model3e)
+AIC(model3e) # 1086, but singular
+ranef(model3e)
+fixef(model3e)
+
+ # notifsLagYear_1_n, criaderos and diag_gg are too correlated (>0.9)
 # criaderos and txs_criads2 are also very correlated
 # diag_gg and txs_criads2 are too correlated
 # lagged notifications term is not strongly correlated with txs_criads2,
