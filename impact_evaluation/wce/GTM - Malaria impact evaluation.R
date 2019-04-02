@@ -5,10 +5,9 @@
 # Preliminary analysis of bednets impact
 # Also some analysis of other interventions such as breeding sites treatment
 # --------------------------
+install.packages(c("lme4", "data.table"))
 library(data.table)
 library(lme4)
-install.packages("bootMer")
-library(bootMer)
 
 codePath = "PCE/gf/"
 
@@ -68,7 +67,9 @@ datmalaria2[, sum(Notifs) ,by=.(Year)]
 # Cum Bednets distr
 dcast(datmalaria2[, sum(cumBNLagSem_1) ,by=.(Year, deptocode)], deptocode ~ Year)
 # Bednets distr
-dcast(datmalaria2[, sum(bednetsLagSem_1) ,by=.(Year, deptocode)], deptocode ~ Year)
+dcast(datmalaria2[, sum(bednetsLagSem_2) ,by=.(Year, deptocode)], deptocode ~ Year)
+datmalaria2[, sum(bednetsLagSem_2) ,by=.(deptocode)]
+
 
 model1 = glmer(Notifs ~ 
                    1 + notifsLagYear_1_n +
@@ -167,7 +168,7 @@ model3c = glmer(Notifs ~
                 ))
 summary(model3c)
 AIC(model3c) # 1124, better AIC, but no department level effect, not singular +1
-# 1223 in windows R analysis run
+# 1223 in second run
 ranef(model3c)
 # Effect is 10% decrease in notifications, in general, pero 1K bednets distributed
 1-exp(-0.111)
@@ -177,13 +178,23 @@ datmalaria2[(datmalaria2$deptocode %in% deptosGood) &
 counterfactual18 = copy(datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
                 (datmalaria2$semindex %in% c(13,14)), ])
 counterfactual18[, Notifs_old := Notifs]
-counterfactual18[, cumBNLagSem_1_n := 0]
+counterfactual18[, cumBNLagSem_1_n := 0.01]
 predNotifs = predict(model3c,newdata=counterfactual18, type="link") 
+
+# Attemting to get an estimation of confidence intervals with bootMer
 predFun <- function(fit) {
     predict(fit,counterfactual18)
 }
-predNotifsCI <- bootMer(model3c,nsim=200,FUN=predFun,seed=101)
+predNotifsCI <- bootMer(model3c,nsim=100,FUN=predFun,seed=1, verbose = T)
+predsBS = apply(predNotifsCI$t, 2, function (x) { mean(x, na.rm=T) })
+std.err <- apply(predNotifsCI$t, 2, function (x) { sd(x, na.rm=T) })
+CI.lo <- predsBS - std.err*1.96
+CI.hi <- predsBS + std.err*1.96
+# Doesnt look good. Many errors are thrown because the model is not very flexible and does
+# not converge when bootMer runs it repeated times.
+
 counterfactual18[, Notifs_pred := round(exp(predNotifs), 1)] 
+counterfactual18[, Notifs_pred_Boot := round(exp(predsBS), 1)] 
 counterfactual18[,.(Notifs_old, Notifs_pred, deptocode)]
 
 model3d = glmer(Notifs ~ 
@@ -204,10 +215,27 @@ model3d = glmer(Notifs ~
                ))
 summary(model3d)
 AIC(model3d) # 1109 # Not singular :D 
+# 1207 in other run
 # Low correlations in random effects, lagged notifs effect makes sense (positive),
 # only negative effects in bednets
 ranef(model3d)
 fixef(model3d)
+counterfactual18 = copy(datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                    (datmalaria2$semindex %in% c(13,14)), ])
+counterfactual18[, Notifs_old := Notifs]
+counterfactual18[semindex %in% c(13,14), cumBNLagSem_1_n := 0.01]
+predNotifs = predict(model3d,newdata=counterfactual18, type="link") 
+counterfactual18[, Notifs_pred := round(exp(predNotifs), 1)] 
+counterfactual18[, diff:= Notifs_pred - Notifs_old]
+
+write.csv(counterfactual18[,.(sum(diff)), by=.(deptocode) ], "PCE/Outcome Measurement Data/MALARIA/Gtm Malaria impact eval results 2018.csv")
+
+counterfactual18[, Notifs_old := Notifs]
+counterfactual18[semindex %in% c(13,14), cumBNLagSem_1_n := 0.01]
+predNotifs = predict(model3d,newdata=counterfactual18, type="response") 
+counterfactual18[, Notifs_pred := round(predNotifs, 1)] 
+counterfactual18[, diff:= Notifs_pred - Notifs_old]
+counterfactual18[,.(round(sum(Notifs_old)), round(sum(Notifs_pred)), sum(diff)), by=.(deptocode) ]
 
 model3e = glmer(Notifs ~ 
                     1 + factor(Semester) + notifsLagYear_1_n +
