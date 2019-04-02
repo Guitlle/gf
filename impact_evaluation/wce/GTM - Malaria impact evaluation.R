@@ -256,7 +256,36 @@ AIC(model3e) # 1086, but singular
 ranef(model3e)
 fixef(model3e)
 
- # notifsLagYear_1_n, criaderos and diag_gg are too correlated (>0.9)
+
+model3f = glmer(Notifs ~ 
+                    1 + factor(Semester) + notifsLagYear_1_n +
+                    cumBN_n + cumBNLagSem_1_n + cumBNLagSem_2_n +
+                    txs_rociamiento + 
+                    txs_criads2 + 
+                    (1 + factor(Semester)  + notifsLagYear_1_n|deptocode)  +
+                    (-1 + txs_rociamiento + 
+                         txs_criads2 | deptocode) +
+                    (-1 + cumBN_n + cumBNLagSem_1_n + cumBNLagSem_2_n|deptocode)
+                ,
+                data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                       (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+                family=poisson,
+                control=glmerControl(optimizer= "bobyqa",
+                                     optCtrl  = list(maxfun=2e5)
+                ))
+summary(model3f)
+# Fixed effects:
+# Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)        5.85041    1.85112   3.160 0.001575 ** 
+# factor(Semester)2 -0.62467    0.18361  -3.402 0.000668 ***
+# notifsLagYear_1_n  0.08912    0.10134   0.879 0.379143    
+# cumBN_n            0.15866    0.14835   1.069 0.284862    
+# cumBNLagSem_1_n   -0.28328    0.12805  -2.212 0.026953 *  
+# cumBNLagSem_2_n    0.01290    0.07144   0.181 0.856664    
+# txs_rociamiento   -0.50621    0.39759  -1.273 0.202942    
+# txs_criads2       -0.05857    0.43130  -0.136 0.891984    
+
+# notifsLagYear_1_n, criaderos and diag_gg are too correlated (>0.9)
 # criaderos and txs_criads2 are also very correlated
 # diag_gg and txs_criads2 are too correlated
 # lagged notifications term is not strongly correlated with txs_criads2,
