@@ -1,121 +1,107 @@
 # ----------------------------------------------
 # AUTHOR: Emily Linebarger 
 # PURPOSE: Master file for updating resource tracking database. 
-# DATE: Last updated November 2018. 
+# DATE: Last updated May 2019
+# 
+# The current working directory should be the root of this repository
 # ----------------------------------------------
 
-# ---------------------------------------
-# Install packages and set up R  
-# ---------------------------------------
-
+rm(list=ls())
 # ----------------------------------------------------------------------
 # To do list for this code: 
 # - add in an option to only rework one file (make database append-only)
-# - add in variable creation during the append step to flag current grants. 
 # ---------------------------------------------------------------------
 
-rm(list=ls())
-library(lubridate)
-library(data.table)
-library(readxl)
-library(stats)
-library(stringr)
-library(tidyr)
-library(tools)
-library(rlang)
-library(zoo)
-library(dplyr)
-
-options(scipen=100)
-
+# ----------------------------------------------
+# STEP 1: SET UP R
+# ----------------------------------------------
+setwd("C:/Users/elineb/Documents/gf/") #Change to the root of your repository
+source("./resource_tracking/prep/_common/set_up_r.R", encoding="UTF-8")
 # ---------------------------------------
-#Boolean logic switches 
+# Boolean logic switches 
 # ---------------------------------------
-include_stops = FALSE #Set to true if you would like scripts to stop when errors are found (specifically, module mapping)
+#What datasets do you want to run? 
+prep_files = TRUE
+prep_gos = FALSE
+prep_fgh = FALSE 
+prep_ghe = FALSE
+
+#Processing options 
+include_stops = TRUE #Set to true if you would like scripts to stop when errors are found (specifically, module mapping) Recommended to always leave as TRUE. 
 verbose = FALSE #Set to true if you would like warning messages printed (helpful for debugging functions). Urgent messages will always be flagged regardless of this switch. 
-limit_filelist <- TRUE #Set to TRUE if you want to only run files that will be saved in final budgets and expenditures. 
-
-# ---------------------------------------
-# Set global variables and filepaths.  
-# ---------------------------------------
-
-#Replace global variables to match what code you want to run. 
-user = "elineb" #Change to your username 
-country <- c("cod") #Change to the country you want to update. 
-
-#Mark which grants are currently active to save in file - this should be updated every grant period! 
-current_gtm_grants <- c('GTM-H-HIVOS', 'GTM-H-INCAP', 'GTM-M-MSPAS', 'GTM-T-MSPAS')
-current_gtm_grant_period <- c('2018', '2019-2020', '2018-2020', '2016-2019')
-
-current_cod_grants <- c('COD-C-CORDAID', 'COD-H-MOH', 'COD-T-MOH', 'COD-M-MOH', 'COD-M-SANRU')
-current_cod_grant_period <- rep("2018-2020", 5)
-
-current_uga_grants <- c('UGA-C-TASO', 'UGA-H-MoFPED', 'UGA-M-MoFPED', 'UGA-M-TASO', 'UGA-T-MoFPED')
-current_uga_grant_period <- rep("2018-2020", 5)
-
-#Filepaths
-j = ifelse(Sys.info()[1]=='Windows','J:','/home/j')
-dir = paste0(j, '/Project/Evaluation/GF/')
-code_loc = ifelse(Sys.info()[1]=='Windows', paste0('C:/Users/', user, '/Documents/gf/'), paste0('/homes', user, '/gf/'))
-code_dir = paste0(code_loc, "resource_tracking/prep/")
-combined_output_dir = paste0(j, "resource_tracking/multi_country/mapping")
-source(paste0(code_dir, "shared_mapping_functions.R")) 
+rerun_filelist = FALSE #Set to TRUE if you want to prep all files in the file list again. 
+limit_filelist = TRUE #Set to TRUE if you want to only run files that will be saved in final budgets and expenditures. 
+test_current_files = TRUE #Set to true if you would like to run unit tests on current database. Set to false if you would like to run tests on archived database. 
 
 # ----------------------------------------------
-# STEP 1: Read in and verify module mapping framework
+# STEP 2: PREP GF FILES AND GOS DATA 
 # ----------------------------------------------
-  
-  map = read_xlsx(paste0(j, "Project/Evaluation/GF/mapping/multi_country/intervention_categories/intervention_and_indicator_list.xlsx"), sheet='module_mapping')
-  map = data.table(map)
-  source(paste0(code_dir, "2_verify_module_mapping.r"))
-  module_map <- prep_map(map)
-  
-# ----------------------------------------------
-# STEP 2: Load country directories and file list
-# ----------------------------------------------
-  
-  
-  master_file_dir = paste0("J:/Project/Evaluation/GF/resource_tracking/", country, "/grants/")
-  export_dir = paste0("J:/Project/Evaluation/GF/resource_tracking/", country, "/prepped/")
-  country_code_dir <- paste0(code_dir, "global_fund_prep/", country, "_prep/")
-  file_list = fread(paste0(master_file_dir, country, "_budget_filelist.csv"), stringsAsFactors = FALSE)
-  file_list$start_date <- as.Date(file_list$start_date, format = "%m/%d/%Y")
-  file_list = file_list[, -c('notes')]
-  
-  #Validate file list 
-  desired_cols <- c('file_name', 'sheet', 'function_type', 'start_date', 'disease', 'data_source', 'period', 'qtr_number', 'grant', 'primary_recipient',
-                    'secondary_recipient', 'language', 'geography', 'grant_period', 'grant_status', 'file_iteration')
-  #stopifnot(colnames(file_list) %in% desired_cols)
-  
-  stopifnot(sort(unique(file_list$data_source)) == c("fpm", "pudr"))
-  stopifnot(sort(unique(file_list$file_iteration)) == c("final", "initial"))
-  
-  #Turn this variable on to run only a limited section of each country's file list; i.e. only the part that will be kept after GOS data is prioritized in step 4 (aggregate data). 
-  if(limit_filelist==TRUE){
-    file_list = prioritize_gos(file_list)
+if (prep_files | prep_gos){
+  if (prep_files){
+    country = "gtm" #Change to the country you want to update. Options are "cod", "gtm", "sen", or "uga".  
+    master_file_dir = paste0(dir, "_gf_files_gos/", country, "/raw_data/")
+    export_dir = paste0(dir, "_gf_files_gos/", country, "/prepped_data/")
   }
   
+  #Source document prep functions 
+  doc_prep_functions = list.files(paste0(code_dir, "gf_files_prep_functions"), full.names=TRUE)
+  for (file in doc_prep_functions){
+    source(file)
+  }
   
-# ----------------------------------------------
-# STEP 3: Prep a single source of data
-# ----------------------------------------------
+  # Load and verify mapping, prep data, and map data. 
+  source(paste0(code_dir, "2a_gf_files_verify_mapping.R"))
+  if (prep_files){
+    source(paste0(code_dir, "2b_gf_files_prep_data.r"))
+  } else if (prep_gos){
+    source(paste0(code_dir, "2c_gos_prep_data.R"))
+  }
+  source(paste0(code_dir, "2d_gf_files_gos_map_data.R"))
   
-  source(paste0(code_dir, "3_prep_country_data.r"))
+}
+# ----------------------------------------------
+# STEP 3: PREP FGH ACTUALS AND ESTIMATES 
+# ----------------------------------------------
+if (prep_fgh){
+  #Source document prep functions 
+  prep_functions = list.files(paste0(code_dir, "fgh_prep_functions"), full.names=TRUE)
+  for (file in prep_functions){
+    source(file)
+  }
+  
+  #Prep and map actuals and estimates. *Would be good to add in a mapping verification and calculations verification step! 
+  source(paste0(code_dir, "3a_fgh_actuals_prep_data.R"))
+  source(paste0(code_dir, "3b_fgh_estimates_prep_data.R"))
+} 
+# ----------------------------------------------
+# STEP 4: PREP GHE (CURRENTLY ONLY SICOIN)
+# ----------------------------------------------
+if (prep_ghe){
+  source(paste0(code_dir, "2a_gf_files_verify_mapping.R"))
+  #Source document prep functions 
+  prep_functions = list.files(paste0(code_dir, "ghe_sicoin_prep_functions"), full.names=TRUE)
+  for (file in prep_functions){
+    source(file)
+  }
+  
+  # Prep and map SICOIN data.*Would be good to add in a mapping verification and calculations verification step!   
+  source(paste0(code_dir, "4a_ghe_sicoin_prep_data"))
+} 
+# ----------------------------------------------
+# STEP 5: Aggregate all data sources
+# ----------------------------------------------
+
+source(paste0(code_dir, "5_aggregate_all_data_sources.R"))
 
 # ----------------------------------------------
-# STEP 4: Aggregate all data sources
+# STEP 6: VALIDATE ALL DATA SOURCES 
 # ----------------------------------------------
 
-  source(paste0(code_dir, "4_aggregate_all_data_sources.r"))
+source(paste0(code_dir, "2e_gf_verify_outputs.R"))
+source(paste0(code_dir, "2f_gf_visualize_data.rmd"))
 
 # ----------------------------------------------
-# STEP 5: Verify budget numbers
-# ----------------------------------------------
-
-  source(paste0(code_dir, "5_verify_budget_numbers.r")) 
- 
-# ----------------------------------------------
-# STEP 6: Upload to Basecamp
+# STEP 7: UPLOAD TO BASECAMP 
 # ----------------------------------------------
 
 #Open in Spyder, and run: "C:/Users/user/Documents/gf/resource_tracking/prep/6_basecamp_upload.py"
