@@ -10,33 +10,33 @@
 # modelStage - (numeric) 1 for first half of results chain, 2 for second half (controls input and output file names, must make sense given modelVersion)
 # testRun - (logical) TRUE will run the model with limited MCMC steps, FALSE will run the full thing
 # ------------------------------------------------
-
-source('./impact_evaluation/drc/set_up_r.r')
+print(commandArgs())
+source('./impact_evaluation/gtm/set_up_r.r')
 
 # for testing purposes
-# task_id = 12
-# args = c('drc_malaria_impact4_under5', '2', 'TRUE')
+# task_id = 10
+# args = c('gtm_tb_first_half2', '1', 'TRUE')
 
 # ----------------------------------------------
 # Store task ID and other args from command line
 if (!'task_id' %in% ls()) task_id <- as.integer(Sys.getenv("SGE_TASK_ID"))
 
 # store non-system command arguments
-if (!'args' %in% ls()) args = commandArgs(trailingOnly=TRUE)
+if (!'args' %in% ls()) args = commandArgs()
+print(paste('Command Args:', args))
+print(paste('Task ID:', task_id))
 if(length(args)==0) stop('No commandArgs found!') 
 
 # the first argument should be the model version to use
-modelVersion = args[1]
+modelVersion = args[5]
 
 # the second argument should be the "model stage" (1 or 2)
-modelStage = as.numeric(args[2])
+modelStage = as.numeric(args[6])
 
 # the third argument should be whether to run a test run (TRUE) or full run (FALSE)
-testRun = as.logical(args[3])
+testRun = as.logical(args[7])
 
 # print for log
-print(paste('Task ID:', task_id))
-print(paste('Command Args:', args))
 print(paste('Model Version:', modelVersion))
 print(paste('Model Stage:', modelStage))
 print(paste('Test Run:', testRun))
@@ -52,28 +52,36 @@ if (Sys.info()[1]!='Windows' & modelStage==2) load(outputFile4b_scratch)
 if (Sys.info()[1]=='Windows' & modelStage==2) load(outputFile4b)
 
 # subset to current health zone
-h = unique(data$health_zone)[task_id]
-subData = data[health_zone==h]
+d = unique(data$department)[task_id]
+subData = data[department==d]
 
 # define model object
-source(paste0('./impact_evaluation/drc/models/', modelVersion, '.r'))
+source(paste0('./impact_evaluation/gtm/models/', modelVersion, '.R'))
 
 # reduce the data down to only necessary variables
 parsedModel = lavParseModelString(model)
 modelVars = unique(c(parsedModel$lhs, parsedModel$rhs))
-modelVars = c('health_zone','date',modelVars)
+modelVars = c('department','date',modelVars)
 subData = subData[, unique(modelVars), with=FALSE]
 
 # jitter to avoid perfect collinearity
-for(v in names(subData)[!names(subData)%in%c('orig_health_zone','health_zone','date')]) { 
-	if (all(subData[[v]]>0)) subData[, (v):=get(v)+rpois(nrow(subData), (sd(subData[[v]])+2)/10)]
-	if (!all(subData[[v]]>0)) subData[, (v):=get(v)+rnorm(nrow(subData), 0, (sd(subData[[v]])+2)/10)]
+for(v in names(subData)[!names(subData)%in%c('department','date')]) { 
+  if (all(subData[[v]]>0)) subData[, (v):=get(v)+rpois(nrow(subData), (sd(subData[[v]])+2)/10)]
+  if (!all(subData[[v]]>0)) subData[, (v):=get(v)+rnorm(nrow(subData), 0, (sd(subData[[v]])+2)/10)]
+}
+
+# test to see if there are any zero-variance variables in this department (after jittering)
+test = subData[,lapply(.SD,var), .SDcols=modelVars[modelVars!='department']]==0
+if(any(test)) { 
+  print('Some variables have zero variance! The model is going to fail...')
+  print(modelVars[test==TRUE])
+  stop()
 }
 
 # rescale variables to have similar variance
 # see Kline Principles and Practice of SEM (2011) page 67
 scaling_factors = data.table(date=1)
-numVars = names(subData)[!names(subData)%in%c('orig_health_zone','health_zone','date')]
+numVars = names(subData)[!names(subData)%in%c('department','date')]
 for(v in numVars) {
 	s=1
 	while(var(subData[[v]]/s)>1000) s=s*10
@@ -131,13 +139,16 @@ urFit[, se:=se/(scaling_factor.rhs/scaling_factor.lhs)]
 summary = merge(summary, standardizedSummary, by=c('lhs','op','rhs'))
 
 # label health zone
-urFit[, health_zone:=h]
-summary[, health_zone:=h]
+urFit[, department:=d]
+summary[, department:=d]
 # --------------------------------------------------------------
 
 
 # ------------------------------------------------------------------
 # Save model output and clean up
+
+# reassign the temporary output location if the parent script is set to runInParallel FALSE
+if ('runInParallel' %in% ls()) if (runInParallel==FALSE) clustertmpDir2 = tempIeDir
 
 # make unique file name
 if(modelStage==1) outputFile5tmp1 = paste0(clustertmpDir2, 'first_half_semFit_', task_id, '.rds')

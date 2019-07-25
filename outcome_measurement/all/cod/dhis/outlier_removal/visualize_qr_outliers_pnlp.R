@@ -25,19 +25,20 @@ user_name = 'abatzel'
 j = ifelse(Sys.info()[1]=='Windows', 'J:', '/home/j')
 
 # set the directory for input and output
-dir = paste0(j, '/Project/Evaluation/GF/outcome_measurement/cod/prepped_data/PNLP/outliers/figures/')
+dir = paste0(j, '/Project/Evaluation/GF/outcome_measurement/cod/prepped_data/PNLP/outliers/')
 
 #-----------------------------------
 # output files
-outFile = 'pnlp_outliers_figures (correspond to DPS level outliers).pdf'
-outFile2 = 'pnlp_outliers_figures (do not correspond to DPS level outliers).pdf'
-outFile_dps = 'pnlp_outliers_figures_dpsLevel.pdf'
-outFile_rdts = 'outliers_in_RDTs.pdf'
+outFile = 'figures/pnlp_outliers_figures (correspond to DPS level outliers).pdf'
+outFile2 = 'figures/pnlp_outliers_figures (do not correspond to DPS level outliers).pdf'
+outFile_dps = 'figures/pnlp_outliers_figures_dpsLevel.pdf'
+outFile_rdts = 'figures/outliers_in_RDTs.pdf'
+outFile_slides_figures = "figures/outliers_for_slides.pdf"
 outData = 'pnlp_outliers_labeled.rds' 
 #------------------------------------
 # read in the file
-dt = readRDS(paste0(dir, '../prepped_data/PNLP/outliers/pnlp_quantreg_results.rds'))
-dt_dps = readRDS(paste0(dir, '../prepped_data/PNLP/outliers/pnlp_quantreg_results_dpsLevel.rds'))
+dt = readRDS(paste0(dir, 'pnlp_quantreg_results.rds'))
+dt_dps = readRDS(paste0(dir, 'pnlp_quantreg_results_dpsLevel.rds'))
 #------------------------------------
 
 #------------------------------------
@@ -110,14 +111,26 @@ dt_dps[ (value < t1_lower ), outlier_dpsLevel1 :=TRUE ]
 dt = merge(dt, dt_dps[, .(org_unit_id, date, variable, element_id, outlier_dpsLevel1, outlier_dpsLevel2, outlier_dpsLevel3)], all = TRUE, 
            by.x=c('dps', 'date', 'variable', 'element_id'), by.y=c('org_unit_id', 'date', 'variable', 'element_id'))
 
-dt[ , outlier_in_both_wdps1 := ifelse(outlier == TRUE & outlier_dpsLevel1 == TRUE, TRUE, FALSE) ]
+#dt[ , outlier_in_both_wdps1 := ifelse(outlier == TRUE & outlier_dpsLevel1 == TRUE, TRUE, FALSE) ]
 dt[ , outlier_in_both_wdps2 := ifelse(outlier == TRUE & outlier_dpsLevel2 == TRUE, TRUE, FALSE) ]
-dt[ , outlier_in_both_wdps3 := ifelse(outlier == TRUE & outlier_dpsLevel3 == TRUE, TRUE, FALSE) ]
+#dt[ , outlier_in_both_wdps3 := ifelse(outlier == TRUE & outlier_dpsLevel3 == TRUE, TRUE, FALSE) ]
 # dt[ outlier_in_both_wdps2 == TRUE, .N] # 648 outliers at health zone level (+/- 20 MADs) with corresponding outlier at DPS level (+/- 15 MADs)
 #---------------------------------------------
 
 #----------------------------------------------
-# subset to the health facilities and elements that contain outliers
+# save a copy of the data with outliers identified
+#----------------------------------------------
+dt = dt[, .(dps, health_zone, date, variable, donor, operational_support_partner, population, value, outlier, outlier_in_both_wdps2)]
+dt = dt[ , outlier:= outlier_in_both_wdps2]
+dt[, outlier_in_both_wdps2:=NULL]
+
+dt[outlier==TRUE, .N]
+
+saveRDS(dt, paste0(dir, outData))
+#----------------------------------------------
+
+#----------------------------------------------
+# for graphing: subset to the health facilities and elements that contain outliers
 #----------------------------------------------
 dt[ , combine := paste0(org_unit_id, variable)]
 
@@ -152,8 +165,9 @@ i=1
 
 out <- copy(out_hz_w_dps)
 subtitle = "Red points show HZ-level outliers also identified as DPS-level outliers"
+
 # RDTs subset:
-out = out[grepl(variable, pattern = "RDT"), ]
+# out = out[grepl(variable, pattern = "RDT"), ]
 
 # out <- copy(out_hz_wo_dps)
 # subtitle = "Red points show HZ-level outliers NOT identified as DPS-level outliers,\nand therefore not counted as outliers in final data"
@@ -167,9 +181,9 @@ for (e in unique(out$element)) {
     # create the plot
     list_of_plots[[i]] = ggplot(out[element==e & org_unit_id==o], aes(x=date, y=value)) +
       geom_line(alpha = 0.5) +
-      geom_point(alpha = 0.5) +
-      geom_line(data = out[element==e & org_unit_id==o], aes(x=date, y=fitted_value), color='black') +
-      geom_point(data = out[element==e & org_unit_id==o & outlier==TRUE], color='#d73027', size=3) +
+      geom_point(alpha = 0.5, size = 6) +
+      geom_line(data = out[element==e & org_unit_id==o], aes(x=date, y=fitted_value), color='black', size = 2) +
+      geom_point(data = out[element==e & org_unit_id==o & outlier==TRUE], color='#d73027', size=7) +
       geom_point(data = out[element==e & org_unit_id==o & outlier==TRUE], aes(x=date, y=fitted_value), 
                  color='#4575b4', size=2) +
       scale_color_manual(values=greys) +
@@ -182,7 +196,9 @@ for (e in unique(out$element)) {
       geom_ribbon(data = out[element==e & org_unit_id==o], aes(ymin=t4_lower, ymax=t4_upper),
                   alpha=0.2, fill='#feb24c', color=NA) +
       labs(title=paste0(e,': ', o), x='Date', y='Count', subtitle = subtitle) +
-      theme_bw()
+      theme_bw() +
+      theme(axis.text=element_text(size=20),axis.title=element_text(size=21),  legend.title=element_text(size=20), legend.text =element_text(size=18),
+            plot.title = element_text(size=25), plot.caption = element_text(size=18), plot.subtitle = element_text(size=18) ) + theme(legend.title=element_blank())
     i = i + 1
 }}
 
@@ -194,7 +210,7 @@ for (e in unique(out$element)) {
 # pdf(paste0(dir, outFile_dps), height=6, width=10)
 # pdf(paste0(dir, outFile), height=6, width=10)
 # pdf(paste0(dir, outFile2), height=6, width=10)
-pdf(paste0(dir, outFile_rdts), height=6, width=10)
+pdf(paste0(dir, outFile_slides_figures), height=9, width=11)
 
 for(i in seq(length(list_of_plots))) { 
   print(list_of_plots[[i]])

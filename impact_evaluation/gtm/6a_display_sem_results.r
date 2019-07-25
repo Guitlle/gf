@@ -9,7 +9,7 @@
 # -----------------------------------------------
 # Load/prep data and functions
 
-source('./impact_evaluation/drc/set_up_r.r')
+source('./impact_evaluation/gtm/set_up_r.r')
 
 # load home-made sem graphing function
 source('./impact_evaluation/_common/graphLavaan.r')
@@ -58,9 +58,9 @@ p1 = semGraph(parTable=means1, nodeTable=nodeTable1,
 	lineWidth=1.5, curved=0, tapered=FALSE)
 
 # my sem graph function for second half model
-p2 = semGraph(parTable=means2, nodeTable=nodeTable2, 
+p2 = semGraph(parTable=means2, nodeTable=nodeTable2,
 	scaling_factors=NA, standardized=TRUE, edgeLabels=FALSE,
-	lineWidth=1.5, curved=0, tapered=FALSE, variances=FALSE, 
+	lineWidth=1.5, curved=0, tapered=FALSE, variances=FALSE,
 	boxWidth=2, boxHeight=.5, buffer=c(.2, .25, .25, .25))
 
 # my sem graph function for first half model with coefficients
@@ -69,9 +69,9 @@ p3 = semGraph(parTable=means1, nodeTable=nodeTable1,
 	lineWidth=1.5, curved=0, tapered=FALSE)
 
 # my sem graph function for second half model with coefficients
-p4 = semGraph(parTable=means2, nodeTable=nodeTable2, 
-	scaling_factors=NA, standardized=TRUE, 
-	lineWidth=1.5, curved=0, tapered=FALSE, 
+p4 = semGraph(parTable=means2, nodeTable=nodeTable2,
+	scaling_factors=NA, standardized=TRUE,
+	lineWidth=1.5, curved=0, tapered=FALSE,
 	boxWidth=2, boxHeight=.5, buffer=c(.2, .25, .25, .25))
 
 # my sem graph function for first half "unrelated regressions" model
@@ -80,9 +80,9 @@ p5 = semGraph(parTable=urFit1, nodeTable=nodeTable1,
 	lineWidth=1.5, curved=0, tapered=FALSE)
 
 # my sem graph function for second half "unrelated regressions" model
-p6 = semGraph(parTable=urFit2, nodeTable=nodeTable2, 
-	scaling_factors=NA, standardized=FALSE, 
-	lineWidth=1.5, curved=0, tapered=FALSE, 
+p6 = semGraph(parTable=urFit2, nodeTable=nodeTable2,
+	scaling_factors=NA, standardized=FALSE,
+	lineWidth=1.5, curved=0, tapered=FALSE,
 	boxWidth=2, boxHeight=.5, buffer=c(.2, .25, .25, .25))
 # ----------------------------------------------
 
@@ -95,6 +95,8 @@ print(p1)
 print(p2)
 print(p3)
 print(p4)
+print(p5)
+print(p6)
 dev.off()
 
 # save a time-stamped version for reproducibility

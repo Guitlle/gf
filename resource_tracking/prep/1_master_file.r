@@ -1,7 +1,7 @@
 # ----------------------------------------------
 # AUTHOR: Emily Linebarger 
 # PURPOSE: Master file for updating resource tracking database. 
-# DATE: Last updated May 2019
+# DATE: Last updated July 2019
 # 
 # The current working directory should be the root of this repository
 # ----------------------------------------------
@@ -15,21 +15,26 @@ rm(list=ls())
 # ----------------------------------------------
 # STEP 1: SET UP R
 # ----------------------------------------------
-setwd("C:/Users/elineb/Documents/gf/") #Change to the root of your repository
+if (Sys.info()[1]=='Windows'){
+  setwd("C:/Users/elineb/Documents/gf/") #Change to the root of your repository
+} else {
+  setwd("/ihme/homes/elineb/gf/")
+}
 source("./resource_tracking/prep/_common/set_up_r.R", encoding="UTF-8")
+
 # ---------------------------------------
 # Boolean logic switches 
 # ---------------------------------------
 #What datasets do you want to run? 
 prep_files = TRUE
 prep_gos = FALSE
-prep_fgh = FALSE 
+prep_odah = FALSE
 prep_ghe = FALSE
 
 #Processing options 
 include_stops = TRUE #Set to true if you would like scripts to stop when errors are found (specifically, module mapping) Recommended to always leave as TRUE. 
 verbose = FALSE #Set to true if you would like warning messages printed (helpful for debugging functions). Urgent messages will always be flagged regardless of this switch. 
-rerun_filelist = FALSE #Set to TRUE if you want to prep all files in the file list again. 
+rerun_filelist = TRUE #Set to TRUE if you want to prep all files in the file list again. 
 limit_filelist = TRUE #Set to TRUE if you want to only run files that will be saved in final budgets and expenditures. 
 test_current_files = TRUE #Set to true if you would like to run unit tests on current database. Set to false if you would like to run tests on archived database. 
 
@@ -38,7 +43,7 @@ test_current_files = TRUE #Set to true if you would like to run unit tests on cu
 # ----------------------------------------------
 if (prep_files | prep_gos){
   if (prep_files){
-    country = "gtm" #Change to the country you want to update. Options are "cod", "gtm", "sen", or "uga".  
+    country = "cod" #Change to the country you want to update. Options are "cod", "gtm", "sen", or "uga".  
     master_file_dir = paste0(dir, "_gf_files_gos/", country, "/raw_data/")
     export_dir = paste0(dir, "_gf_files_gos/", country, "/prepped_data/")
   }
@@ -50,19 +55,29 @@ if (prep_files | prep_gos){
   }
   
   # Load and verify mapping, prep data, and map data. 
-  source(paste0(code_dir, "2a_gf_files_verify_mapping.R"))
+  # source(paste0(code_dir, "2a_gf_files_verify_mapping.R"))
   if (prep_files){
     source(paste0(code_dir, "2b_gf_files_prep_data.r"))
   } else if (prep_gos){
-    source(paste0(code_dir, "2c_gos_prep_data.R"))
+    source(paste0(code_dir, "2b_gos_prep_data.R"))
   }
-  source(paste0(code_dir, "2d_gf_files_gos_map_data.R"))
-  
+  # source(paste0(code_dir, "2c_gf_files_gos_map_data.R"))
+  # source(paste0(code_dir, "2e_gf_aggregate_files.R"))
+  # source(paste0(code_dir, "2f_gf_verify_outputs.R"))
+  # 
+  # rmarkdown::render(paste0(code_dir, "2g_gf_visualize_data.rmd",
+  #                          output_dir=paste0(dir, "/visualizations/verification"),
+  #                          output_file="Visual Checks.pdf"))
 }
+
+#Run data gap analysis - optional
+# rmarkdown::render(paste0(code_dir, "reporting_completeness_gf.rmd"),
+#                   output_dir=paste0(dir, "/visualizations/verification"),
+#                   output_file="Reporting Completeness.pdf")
 # ----------------------------------------------
 # STEP 3: PREP FGH ACTUALS AND ESTIMATES 
 # ----------------------------------------------
-if (prep_fgh){
+if (prep_odah){
   #Source document prep functions 
   prep_functions = list.files(paste0(code_dir, "fgh_prep_functions"), full.names=TRUE)
   for (file in prep_functions){
@@ -71,7 +86,8 @@ if (prep_fgh){
   
   #Prep and map actuals and estimates. *Would be good to add in a mapping verification and calculations verification step! 
   source(paste0(code_dir, "3a_fgh_actuals_prep_data.R"))
-  source(paste0(code_dir, "3b_fgh_estimates_prep_data.R"))
+  # source(paste0(code_dir, "3b_fgh_estimates_prep_data.R"))
+  source(paste0(code_dir, "3c_fgh_validate_data.r"))
 } 
 # ----------------------------------------------
 # STEP 4: PREP GHE (CURRENTLY ONLY SICOIN)
@@ -87,21 +103,9 @@ if (prep_ghe){
   # Prep and map SICOIN data.*Would be good to add in a mapping verification and calculations verification step!   
   source(paste0(code_dir, "4a_ghe_sicoin_prep_data"))
 } 
-# ----------------------------------------------
-# STEP 5: Aggregate all data sources
-# ----------------------------------------------
-
-source(paste0(code_dir, "5_aggregate_all_data_sources.R"))
 
 # ----------------------------------------------
-# STEP 6: VALIDATE ALL DATA SOURCES 
-# ----------------------------------------------
-
-source(paste0(code_dir, "2e_gf_verify_outputs.R"))
-source(paste0(code_dir, "2f_gf_visualize_data.rmd"))
-
-# ----------------------------------------------
-# STEP 7: UPLOAD TO BASECAMP 
+# STEP 5: UPLOAD TO BASECAMP 
 # ----------------------------------------------
 
 #Open in Spyder, and run: "C:/Users/user/Documents/gf/resource_tracking/prep/6_basecamp_upload.py"

@@ -11,8 +11,8 @@
 # --------------------------------------------
 # Output file labels (set to '' for default) 
 # in case we're running some secondary analysis
-# this only affects files from step 5 onward
-fileLabel = ''
+# this only affects files from step 4c onward
+fileLabel = '_pc'
 # --------------------------------------------
 
 
@@ -85,19 +85,14 @@ source('./impact_evaluation/_common/run_lavaan_as_glm.r')
 # resource tracking files with prepped budgets, expenditures, disbursements
 budgetFile = paste0(rtDir, 'final_budgets.rds')
 expendituresFile = paste0(rtDir, 'final_expenditures.rds')
-fghFile = paste0(fghDir, 'prepped_current_fgh.rds')
+fghFile = paste0(fghDir, 'archive/prepped_current_fgh.rds')
 gheMalFile = paste0(fghDir, 'ghe_actuals_malaria.rds')
 whoFile = paste0(whoDir, 'who_prepped.rds')
 
 # activities/outputs files
-# pnlpFile = paste0(pnlpDir, 'imputedData_run2_agg_country.rds') # pnlp
-pnlpHZFile = paste0(pnlpDir, 'archive/imputedData_run2_agg_hz.rds')
-# snisBaseFile <- paste0(dhisDir, 'archive/base_services_drc_01_2017_09_2018_prepped.rds') # snis base services
-# snisSiglFile <- paste0(dhisDir, 'archive/sigl_drc_01_2015_07_2018_prepped.rds') # snis sigl (supply chain)
-combinedFile <- paste0(ieDir, 'base_pnlp_sigl_combined_data_hz_level.rds')
-comp_base_file <- paste0(dhisDir, "base_reporting_completeness_hz_prepped_quarterly.rds")
-comp_sigl_file <-paste0(dhisDir, "sigl/sigl1_reporting_completeness_hz_prepped_quarterly.rds")
-ssc_file <- paste0(dhisDir, "SSC_data_2017_2018_prepped.rds")
+pnlp_hz_file = paste0(pnlpDir, 'imputedData_run_0_001_aggVars_lagsLeads_condensed_hz_median.rds')
+combined_data_file = paste0(ieDir, 'base_pnlp_sigl_combined_data_hz_level.rds')
+snis_comp_file = paste0(dhisDir, "all_data_sets_completeness_hz_quarterly.rds")
 
 # outcomes/impact files
 mapITNFiles = list.files(paste0(lbdDir, 'mapitncov/mean/1y/'), '*.tif', 
@@ -123,8 +118,8 @@ admin2ShapeFile = paste0(dir, '/mapping/cod/health_zones_who/health2.shp')
 
 # "nodetables" aka "nodetables" 
 # listing names of variables in each model, their labels and coordinates for the SEM graph
-nodeTableFile1 = './impact_evaluation/drc/visualizations/nodetable_first_half.csv'
-nodeTableFile2 = './impact_evaluation/drc/visualizations/nodetable_second_half.csv'
+nodeTableFile1 = paste0('./impact_evaluation/drc/visualizations/nodetable_first_half', fileLabel, '.csv')
+nodeTableFile2 = paste0('./impact_evaluation/drc/visualizations/nodetable_second_half', fileLabel, '.csv')
 # ---------------------------------------------------------------------------------
 
 
@@ -161,7 +156,7 @@ outputFile3 = paste0(ieDir, 'inputs_outputs.RDS')
 
 # output files from 3b_correct_to_models.r
 outputFile3b = paste0(ieDir, 'outcomes_impact_corrected.RDS')
-outputFile3bGraphs = paste0(ieDir, '../visualizations/outcomes_impact_correction_results.pdf')
+outputFile3bGraphs = paste0(ieDir, '../visualizations/crosswalking_results.pdf')
 
 # output file from 4a_set_up_for_analysis.r
 outputFile4a = paste0(ieDir, 'first_half_pre_model.rdata')
@@ -176,8 +171,8 @@ if (Sys.info()[1]!='Windows') {
 }
 
 # output file from 4c and 4d_explore_data.r (graphs)
-outputFile4c = paste0(ieDir, '../visualizations/first_half_exploratory_graphs.pdf')
-outputFile4d = paste0(ieDir, '../visualizations/second_half_exploratory_graphs.pdf')
+outputFile4c = paste0(ieDir, '../visualizations/first_half_exploratory_graphs', fileLabel, '.pdf')
+outputFile4d = paste0(ieDir, '../visualizations/second_half_exploratory_graphs', fileLabel, '.pdf')
 
 # output file from 5a_run_first_half_analysis.R
 outputFile5a = paste0(ieDir, 'first_half_model_results', fileLabel, '.rdata')

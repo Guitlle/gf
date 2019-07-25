@@ -10,6 +10,7 @@
 
 library(lubridate)
 library(data.table)
+library(feather)
 library(foreign)
 library(ggplot2)
 library(glue)
@@ -33,14 +34,14 @@ options(digits=6)
 # ---------------------------------------
 
 #J:drive filepaths
-j = ifelse(Sys.info()[1]=='Windows','J:','/home/j')
+j = ifelse(Sys.info()[1]=='Windows','J:','/home/j/')
 dir = paste0(j, '/Project/Evaluation/GF/resource_tracking/')
 combined_output_dir = paste0(dir, "_gf_files_gos/combined_prepped_data/")
 mapping_dir = paste0(dir, "modular_framework_mapping/")
 
 #Code filepaths 
 code_dir = "./resource_tracking/prep/"
-common_dir = paste0(code_dir, "/_common/")
+common_dir = paste0(code_dir, "_common/")
 
 fgh_raw = paste0(dir, "_fgh/raw_data/")
 fgh_prepped = paste0(dir, "_fgh/prepped_data/")
@@ -59,10 +60,11 @@ sicoin_prepped = paste0(dir, "_ghe/sicoin_gtm/prepped_data/")
 
 codebook = read.xlsx(paste0(dir, "documentation/RT_Codebook.xlsx"))
 
+pudr_labels = read.xlsx(paste0(dir, "documentation/PUDR Semester Labeling.xlsx"))
+
 #Source shared functions
 source(paste0(common_dir, "global_variables.R"))
-source(paste0(common_dir, "shared_string_functions.R"), encoding="UTF-8")
-source(paste0(common_dir, "shared_calculation_functions.R"))
+source(paste0(common_dir, "shared_functions.r"), encoding="UTF-8")
 source(paste0(j, '/Project/IRH/HIV/code/currency_conversion.R')) #FGH team's currency conversion function. 
 
 
