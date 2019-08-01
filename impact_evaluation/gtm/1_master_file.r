@@ -26,14 +26,14 @@ source('./impact_evaluation/gtm/set_up_r.r')
 # ---------------------------------------
 # Set boolean switches
 # ---------------------------------------
-rerun_inputs <- FALSE 
-rerun_outputs <- FALSE
-rerun_outcomes <- FALSE
-rerun_merge <- FALSE
+rerun_inputs <- TRUE
+rerun_outputs <- TRUE
+rerun_outcomes <- TRUE
+rerun_merge <- TRUE
 rerun_adjust <- FALSE
 rerun_explore <- TRUE
-rerun_models <- TRUE
-rerun_analysis <- TRUE
+rerun_models <- FALSE
+rerun_analysis <- FALSE
 rerun_post <- FALSE
 
 # ---------------------------------------
@@ -69,6 +69,7 @@ if(rerun_outcomes == TRUE){
 # ---------------------------------------
 if (rerun_merge==TRUE) { 
 	source('./impact_evaluation/gtm/3_merge_data.R')
+  source('./impact_evaluation/gtm/3b_merge_second_half.R')
 }
 
 # ---------------------------------------

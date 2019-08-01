@@ -2,7 +2,7 @@
 # David Phillips
 # 
 # 3/18/2019
-# This runs the second-half SEM dose response model for one health zone
+# This runs the SEM dose response model for one health zone
 # Intended to be run in parallel by 5d
 # The current working directory should be the root of this repo
 # Command-Line Arguments:
@@ -15,7 +15,7 @@ source('./impact_evaluation/drc/set_up_r.r')
 
 # for testing purposes
 # task_id = 12
-# args = c('drc_malaria_impact4_under5', '2', 'TRUE')
+# args = c('drc_malaria6', '1', 'TRUE')
 
 # ----------------------------------------------
 # Store task ID and other args from command line

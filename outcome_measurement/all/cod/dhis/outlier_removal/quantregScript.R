@@ -23,16 +23,16 @@ scratchDir = paste0('/ihme/scratch/users/', user, '/quantreg/')
 scratchInFile = paste0(scratchDir, 'data_for_qr.fst')
 arrayFile = paste0(scratchDir, 'array_table_for_qr.fst')
 parallelDir = paste0(scratchDir, 'parallel_files/')
-outFile = paste0(parallelDir, 'quantreg_output', i, '.fst')
+outFile = paste0(parallelDir, 'quantreg_output_', i, '.fst')
 
 # read in the array table 
 array_table = read.fst(arrayFile)
-array_table = as.data.table(array_table)
-head(array_table)
+array_table = data.table(array_table)
 
 # read org unit from the array table
-o = array_table[i]$org_unit_id # unique facility id
-print(o)
+# o = array_table[i]$org_unit_id # unique facility id
+e = array_table[i]$element_id # unique facility id
+print(e)
 #------------------------------------
 
 #-----------------------------------
@@ -40,9 +40,8 @@ print(o)
 #------------------------------------
 
 dt = read.fst(scratchInFile)
-dt = as.data.table(dt)
-subset = dt[org_unit_id==o, ] 
-
+dt = data.table(dt)
+subset = dt[element_id==e, ] 
 #------------------------------------
 
 #------------------------------------
@@ -50,46 +49,46 @@ subset = dt[org_unit_id==o, ]
 #------------------------------------
 combined_qr_results = data.table()
 
-for (e in unique(subset$element_id)) {
-    
+for (o in unique(subset$org_unit_id)) {
   # subset the data further based on loop parameters for qr
-    subset_further = subset[element_id == e] 
+  subset_further = subset[org_unit_id == o,] 
+  
+  # skip cases that will fail
+  n = nrow(subset_further[!is.na(value), ])
+  #print(n)
+  var = var(subset_further$value, na.rm=T)
+  #print(var)
+  nx = length(unique(subset_further$date))
+  #print(nx)
+  
+  # skip if less than 3 data points or variance is 0
+  if(n>=3 & var!=0 & nx>=2) {  
+    # create formula
+    form = 'value~date'
     
-    # skip cases that will fail
-    n = nrow(subset_further[!is.na(value), ])
-    print(n)
-    var = var(subset_further$value, na.rm=T)
-    print(var)
-    nx = length(unique(subset_further$date))
-    print(nx)
+    # # add fixed effect on group if more than one group exist
+    form = as.formula(form)
     
-    # skip if less than 3 data points or variance is 0
-    if(n>=3 & var!=0 & nx>=2) {  
-      # create formula
-      form = 'value~date'
-      
-      # # add fixed effect on group if more than one group exist
-      form = as.formula(form)
-      
-      # run quantreg
-      quantFit = rq(form, data=subset_further, tau=0.5)
-      summary(quantFit) 
-      
-      # list the residuals and add them to the out file
-      subset_further[, fitted_value:=predict(quantFit, newdata = subset_further)]
-      subset_further[, resid:=(fitted_value - value)]
-      subset_further[, skipped_qr := "no"]
-      
-    } else { 
-      subset_further[, fitted_value:=NA]
-      subset_further[, resid:=NA]
-      subset_further[, skipped_qr := "yes"]
-    }
+    # run quantreg
+    quantFit = rq(form, data=subset_further, tau=0.5)
+    summary(quantFit) 
     
-    if (nrow(combined_qr_results)==0) {
-      combined_qr_results = subset_further 
-      } else { combined_qr_results = rbindlist(list(combined_qr_results, subset_further), use.names=TRUE, fill = TRUE) }
+    # list the residuals and add them to the out file
+    subset_further[, fitted_value:=predict(quantFit, newdata = subset_further)]
+    subset_further[, resid:=(fitted_value - value)]
+    subset_further[, skipped_qr := "no"]
+    
+  } else { 
+    subset_further[, fitted_value:=NA]
+    subset_further[, resid:=NA]
+    subset_further[, skipped_qr := "yes"]
   }
+  
+  if (nrow(combined_qr_results)==0) {
+    combined_qr_results = subset_further 
+  } else { combined_qr_results = rbindlist(list(combined_qr_results, subset_further), use.names=TRUE, fill = TRUE) }
+  print(paste0("completed loop for org_unit_id = ", o))
+}
 
 
 #------------------------------------

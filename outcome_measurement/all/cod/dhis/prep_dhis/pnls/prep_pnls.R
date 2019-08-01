@@ -3,22 +3,23 @@
 # ----------------------------------------------
 # Caitlin O'Brien-Carelli
 #
-# 1/25/19
+# 6/17/2019
 # ----------------------------------------------
 
-# --------------------
+# ------------------------------
 # Set up R
 rm(list=ls())
 library(data.table)
 library(ggplot2)
 library(dplyr)
 library(stringr) 
-# --------------------
 
-# shell script for working on the cluster
-# sh /share/singularity-images/rstudio/shells/rstudio_qsub_script.sh -p 1247 -s 2 
+# ------------------------------
+# increase memory of RStudio session
+memory.limit(size = 20000)
+# ------------------------------
 
-# --------------------
+#-------------------------------
 # set working directories
 
 # detect if operating on windows or on the cluster 
@@ -26,28 +27,26 @@ j = ifelse(Sys.info()[1]=='Windows', 'J:', '/home/j')
 
 # set the directory for input and output
 dir = paste0(j, '/Project/Evaluation/GF/outcome_measurement/cod/dhis_data/')
-setwd(dir)
 
 #---------------------------------------
 # load the file that represents a subset (no sex or )
 
-dt = readRDS(paste0(dir, 'pre_prep/merged/pnls_subset_2014_11_01_2018_12_01.rds'))
+dt = readRDS(paste0(dir, 'outlier_screened/pnls_subset_2017_01_01_2019_04_01_outliers_replaced.rds'))
 
 #---------------------------------------
-# reporting completeness
-# 
-# report = dt[ ,.(facilities=length(unique(org_unit_id))), by=date]
-# 
-# ggplot(report, aes(x=date, y=facilities)) +
-#   geom_point() +
-#   geom_line() +
-#   labs(x="Date", y="Facilities reporting",
-#        title='Total facilities reporting by date') +
-#   theme_bw()
-#---------------------------------------
+# reporting completeness: diagnostic plot
 
-# subset to 2017 on 
-dt = dt[2017 <=  year(date) ]
+report = dt[ ,.(facilities=length(unique(org_unit_id))), by=date]
+
+ggplot(report, aes(x=date, y=facilities)) +
+  geom_point() +
+  geom_line() +
+  labs(x="Date", y="Facilities reporting",
+       title='Total facilities reporting by date') +
+  theme_bw() +
+  theme(text=element_text(size=18))
+
+#--------------------------------------
 
 #----------------------
 # function to eliminate diacritical marks
@@ -70,10 +69,8 @@ fix_diacritics = function(x) {
   
 }
 
-#-----------------------------
-# convert factor variables to characters and value to numeric
-dt[ , value:=as.numeric(as.character(value))]
-dt[ , category:=as.character(category)]
+#------------------------------------------------------
+# Run subpopulatuons 
 
 #-----------------------------
 # create an element that is easier to grep
@@ -82,8 +79,11 @@ dt[ , element1:=fix_diacritics(tolower(element))]
 #--------------------------------------
 # create subpopulations from the elements
 
+# identify customers/patients
+dt[grepl('client', element1) & !grepl('ps', element1), subpop:='customer']
+
 # run other first in case more specific populations are included
-dt[grep('autres', element1), subpop:='others']
+dt[grepl('autres', element1) & !grepl('alades', element1), subpop:='other_groups']
 dt[grep('prisonniers', element1), subpop:='prisoner']
 dt[grep('udi', element1), subpop:='idu']
 dt[grep('tg', element1), subpop:='trans']
@@ -110,8 +110,8 @@ dt[grep('svs', element1), subpop:='svs']
 dt[grep('survivants', element1), subpop:='svs'] 
 
 # commercial sex workers and clients
-dt[grep('ps', element1), subpop:='csw']
-dt[grep('client', element1), subpop:='csw_client']
+dt[grep('ps', element1), subpop:='csw'] # will include sex worker customers
+dt[grepl('client', element1) & grepl('ps', element1), subpop:='csw_customer'] # overwrite sex worker customers
 
 # refugees and idps
 dt[grep('deplaces', element1), subpop:='idp']
@@ -134,6 +134,18 @@ dt[grep('eev', element1), subpop:='exposed_infant']
 dt[grep('handicap', element1), subpop:='disabled']
 
 #------------------------------------------------------------
+# save interim output 
+
+# arguments for the save
+min = dt[ , min(date)]
+min = gsub('-', '_', min)
+max = dt[ , max(date)]
+max = gsub('-', '_', max)
+
+# save the output with subpops created 
+saveRDS(dt, paste0(dir, 'pre_prep/merged/pnls_subset_', min, '_', max, '_subpops.rds'))
+
+#------------------------------------------------------------
 # generate age and sex categories
 
 # create a searchable category variable
@@ -154,8 +166,11 @@ dt[grep('femme', category1), sex:='Female']
 dt[!is.na(maternity), sex:='Female']
 
 dt[grep('masc', category1), sex:='Male']
-dt[subpop=='msm', sex:='Male']
 dt[subpop=='male_partners', sex:='Male']
+dt[subpop=='msm', sex:='Male']
+
+# missing sex and subpops
+dt[is.na(sex) & grepl("couple", element1), sex:='Couple']
 
 #---------------------
 # old and new cases
@@ -215,57 +230,60 @@ dt[category %in% drugs, stock_category:=category]
 
 #-------------------------------------
 # create a tb binary 
+
 dt[grep('tb', element1), tb:=TRUE]
 dt[!grep('tb', element1), tb:=FALSE]
 #------------------------------------
+
 #------------------------------------
 # delete excess variables
 dt[ , c('data_set', 'element1','category1'):=NULL]
 
 #------------------------------------
-# collapse on category
-dt[ , value:=as.numeric(as.character(value))]
-dt = dt[ ,.(value=sum(value, na.rm=T)), 
-         by=c("set", "org_unit_id", "element_id", "org_unit", "date", 
-              "element_eng",  "org_unit_type", "level", "dps", 
-              "health_zone", "health_area", "mtk", "element", "subpop",
-              "maternity", "sex", "case", "age", "stock_category", "tb")]
+# save interim output 
+
+# including ages
+saveRDS(dt, paste0(dir, 'pre_prep/merged/pnls_subset_', min, '_', max, '_subpops_ages.rds'))
 
 #------------------------------------
-# fix some english translations and abbreviations
+# collapse on category
 
-#  drop the hyphen in co-infected in order to strsplit 
-dt[    , element:= gsub('co-infectés', 'coinfectes', element)]
-dt[    , element:= gsub('co-infectes', 'coinfectes', element)]
+# the categories are now reflected in the sex, age, subpop, and maternity variables
+names = names(dt)[names(dt)!='category' & names(dt)!='value' & names(dt)!='country']
+dt = dt[ ,.(value=sum(value, na.rm=T)), by=names]
 
-# fix english translations of abbreviations for major abbreviations
-dt[ ,element_eng:= gsub('VIH', 'HIV', element_eng)]
-dt[ ,element_eng:= gsub('PLWHA', 'PLHIV', element_eng)]
-dt[ ,element_eng:= gsub('INH', 'IPT', element_eng)]
+# check that the number of rows is the same before and after 
 
-# fix co-infected
-dt[ ,element_eng:= gsub('co-infectes', 'coinfected', element_eng)]
 
 #-------------------------------------
 # save a single data set 
-saveRDS(dt, paste0(dir, 'prepped/pnls_sets/pnls_clean_all_sets.rds'))
+
+saveRDS(dt, paste0(dir, 'prepped/pnls_sets/pnls_clean_all_sets_', min, '_', max, '.rds'))
 
 #--------------------------------------
 # save each data set as a distinct RDS file
-sets = dt[ , unique(set)]
-
-# arguments for the save
-min = dt[ , min(date)]
-min = gsub('-', '_', min)
-max = dt[ , max(date)]
-max = gsub('-', '_', max)
 
 # save the sets 
-for (s in sets) {
-  y = tolower(s)
-  saveRDS(dt[set==s], paste0(dir, 'prepped/pnls_sets/pnls_',
-                             y,'_', min, '_', max,'.rds'))
-}
+for (s in unique(dt$pnls_set)) {
+  current_data = dt[pnls_set==s]
+  set_name = tolower(as.character(s))
+  saveRDS(current_data, paste0(dir, 'prepped/pnls_sets/pnls_',
+                             set_name,'_', min, '_', max,'.rds')) }
 
 #----------------------------------------
+# data set reporting diagnostic plots
+
+set_counts = dt[ ,.(value=length(unique(org_unit_id))), by=.(date, pnls_set)]
+
+ggplot(set_counts, aes(x=date, y=value, color=pnls_set)) +
+  geom_point() +
+  geom_line() +
+  labs(x="Date", y="Facilities reporting",
+       title='Total facilities reporting by data set within PNLS') +
+  theme_bw() +
+  theme(text=element_text(size=18))
+
+#--------------------------------------------------------------------
+
+
 

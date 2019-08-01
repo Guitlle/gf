@@ -15,6 +15,13 @@ source('./impact_evaluation/drc/set_up_r.r')
 # load
 data = readRDS(outputFile3)
 
+# bring in population estimates where possible if the model is a per-capita model
+if(fileLabel=='_pc') { 
+	pop = readRDS(outputFile2c)
+	pop = pop[,c('health_zone','date','population'), with=F]
+	data = merge(data,pop, by=c('health_zone','date'), all.x=TRUE)
+}
+
 # make unique health zone names for convenience
 data[, orig_health_zone:=health_zone]
 data[, health_zone:=paste0(health_zone, '_', dps)]
@@ -63,6 +70,7 @@ for(v in numVars) {
 		data[health_zone==h, tmp:=exp(predict(lmFit, newdata=data[health_zone==h]))]
 		lim = max(data[health_zone==h][[v]], na.rm=T)+sd(data[health_zone==h][[v]], na.rm=T)
 		data[health_zone==h & tmp>lim, tmp:=lim]
+		# ggplot(data[health_zone==h], aes_string(y=v, x='date')) + geom_point() + geom_point(aes(y=tmp),color='red')
 		data[health_zone==h & is.na(get(v)), (v):=tmp]
 		pct_complete = floor(i/(length(numVars)*length(unique(data$health_zone)))*100)
 		cat(paste0('\r', pct_complete, '% Complete'))
@@ -85,6 +93,7 @@ cumulVars = c(cumulVars, 'value_ITN_received', 'value_RDT_received', 'value_ACT_
 	'value_ITN_consumed', 'value_ACTs_SSC', 'value_RDT_completed', 'value_SP', 
 	'value_severeMalariaTreated', 'value_totalPatientsTreated', 'value_totalPatientsTreated_under5', 
 	'value_ACT_received_under5', 'value_ACTs_SSC_under5','value_severeMalariaTreated_under5')
+cumulVars = cumulVars[!cumulVars %in% c('value_ACTs_SSC_under5')] # drop until we can create this variable
 for(v in cumulVars) { 
 	nv = gsub('value_','',v) 
 	data[, (paste0(nv,'_cumulative')):=cumsum(get(v)), by='health_zone']
@@ -97,7 +106,7 @@ untransformed = copy(data)
 # (Smithson et al 2006 Psychological methods "A better lemon squeezer")
 smithsonTransform = function(x) { 
 	N=length( x[!is.na(x)] )
-	prop_lsqueeze = logit(((x*(N-1))+0.5)/N)
+	logit(((x*(N-1))+0.5)/N)
 }
 for(v in complVars) { 
 	data[get(v)>1, (v):=1]
@@ -120,6 +129,24 @@ for(v in lagVars) {
 	untransformed[, (paste0('lag_',v)):=data.table::shift(get(v),type='lag',n=2), by='health_zone']
 }
 data = na.omit(data)
+
+# per capita variables of everything in model 1
+if(fileLabel=='_pc') { 
+	pcVars = c("ITN_received_cumulative", "RDT_received_cumulative", 
+		"ACT_received_cumulative", "ITN_consumed_cumulative", 
+		"ACTs_SSC_cumulative", "RDT_completed_cumulative", 
+		"SP_cumulative", "severeMalariaTreated_cumulative", 
+		"totalPatientsTreated_cumulative", "lag_exp_M1_1_cumulative", 
+		"lag_exp_M1_2_cumulative", "lag_exp_M2_1_cumulative", 
+		"lag_other_dah_M2_cumulative", "lag_exp_M2_3_cumulative", 
+		"lag_exp_M3_1_cumulative", "lag_other_dah_M1_1_cumulative", 
+		"lag_ghe_cumulative", "lag_other_dah_M2_3_cumulative", 
+		"lag_exp_M2_6_cumulative")
+	for(v in pcVars) { 
+		data[, (paste0(v, '_pc')):=get(v)/population]
+		untransformed[, (paste0(v, '_pc')):=get(v)/population]
+	}
+}
 # -----------------------------------------------------------------------
 
 
@@ -130,8 +157,9 @@ data = na.omit(data)
 test = nrow(data)==nrow(unique(data[,c('health_zone','date'), with=F]))
 if (test==FALSE) stop(paste('Something is wrong. date does not uniquely identify rows.'))
 
-# test for collinearity
-
+# test for missingness
+test = nrow(data)==nrow(na.omit(data))
+if(test==FALSE) stop('Something is wrong. There are missing values after GLM imputation')
 # ---------------------------------------------------------------------------------------
 
 

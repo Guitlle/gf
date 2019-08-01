@@ -28,7 +28,8 @@ prep_general_detailed_budget = function(dir, inFile, sheet_name, start_date, per
   # language = file_list$language[i]
   # -------------------------------------
   #Sanity check: Is this sheet name one you've checked before? 
-  verified_sheet_names <- c('Detailed Budget', 'Detailed budget', 'DetailedBudget', 'Recomm_Detailed Budget', '1.Detailed Budget', 'Detailed Budget Revise', 'DETAIL')
+  verified_sheet_names <- c('Detailed Budget', 'Detailed budget', 'DetailedBudget', 'Recomm_Detailed Budget', '1.Detailed Budget', 'Detailed Budget Revise',
+                            'DETAIL', 'Detailed Budget _ Human rights', 'Detailed _ budget AGYW')
   if (!sheet_name%in%verified_sheet_names){
     print(paste0("Sheet name: '", sheet_name, "'"))
     stop("This sheet name has not been run with this function before - Are you sure you want this function? Add sheet name to verified list within function to proceed.")
@@ -172,20 +173,21 @@ prep_general_detailed_budget = function(dir, inFile, sheet_name, start_date, per
   }
   
   if (language == "eng"){
-    old_names = c('activity description', 'cost input', old_qtr_names)
-    new_names = c('activity_description', 'cost_category', new_qtr_names)
-    if ('recipient'%in%names(gf_data)){
-      setnames(gf_data, 'recipient', 'implementer')
+    if ('recipient'%in%names){
+      old_names = c('activity description', 'cost input', 'recipient', old_qtr_names)
+      new_names = c('activity_description', 'cost_category', 'implementer', new_qtr_names)
+    } else {
+      old_names = c('activity description', 'cost input', old_qtr_names)
+      new_names = c('activity_description', 'cost_category', new_qtr_names)
     }
   } else if (language == "fr") {
-    old_names = c("description de l'activite", "element de cout", old_qtr_names)
-    new_names = c('activity_description', 'cost_category', new_qtr_names)
-    if ('recipient'%in%names(gf_data)){
-      setnames(gf_data, 'recipient', 'implementer')
-    }
-    if ("recipiendaire"%in%names(gf_data)){
-      setnames(gf_data, "recipiendaire", 'implementer')
-    }
+    if ("recipiendaire"%in%names){
+      old_names = c("description de l'activite", "element de cout", "recipiendaire", old_qtr_names)
+      new_names = c('activity_description', 'cost_category', "implementer", new_qtr_names)
+    } else {
+      old_names = c("description de l'activite", "element de cout", old_qtr_names)
+      new_names = c('activity_description', 'cost_category', new_qtr_names)
+    } 
   } else if (language == "esp"){
     if ('implementador'%in% names){
     old_names = c('modulo', 'intervencion', 'descripcion de la actividad', 'categoria de gastos', "implementador", old_qtr_names)

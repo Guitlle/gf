@@ -717,9 +717,9 @@ gen_mean_units1 = function(dt=dt, coord_ann=coord_ann, drug_id, drug_name, date_
     scale_fill_gradientn(colors=(brewer.pal(9, 'Reds'))) +
     theme_void() +
     facet_wrap(~year, strip.position="bottom") +
-    labs(title=paste0(drug_name, " kits per facility, by district"), subtitle="Annual data restricted to Jan-Aug",
+    labs(title=paste0(drug_name, " units per facility, by district"), subtitle="Annual data restricted to Jan-Aug",
          caption="*Denominator only includes facilities with 'available, usable stock' of this drug",
-         fill="Kits per facility")
+         fill="Units per facility")
   return(mean_units1)
 }
 
@@ -757,13 +757,13 @@ gen_mean_units2 = function(dt=dt, coord_ann=coord_ann, drug_id, drug_name, date_
     geom_polygon() + 
     theme_void() + 
     facet_wrap(~year) + 
-    scale_fill_gradientn('Kits per\nFacility', colours=ratio_colors) + 
+    scale_fill_gradientn('Units per\nFacility', colours=ratio_colors) + 
     coord_fixed(ratio=1) + 
     scale_x_continuous('', breaks = NULL) + 
     scale_y_continuous('', breaks = NULL) + 
-    labs(title=paste0(drug_name, " kits per facility, by district"), subtitle="Annual data restricted to Jan-Aug",
+    labs(title=paste0(drug_name, " units per facility, by district"), subtitle="Annual data restricted to Jan-Aug",
          caption="*Denominator only includes facilities with 'available, usable stock' of this drug",
-         fill="Kits per facility") + 
+         fill="Units per facility") + 
     theme(plot.title=element_text(vjust=-1), plot.caption=element_text(vjust=6)) + 
     geom_label_repel(data = labels, aes(label = label, x = lon, y = lat, group = label), inherit.aes=FALSE, size=3)
   return(mean_units2)
@@ -778,8 +778,8 @@ gen_monthly_so_roc1 = function(dt=dt, coord_months=coord_months, drug_id, drug_n
   monthly_so_rate_dps = dt[stock_category == 'number_of_days_stocked_out' &!is.na(value) & element_id==drug_id, .(id, value, date, expected_days, dps)]
   monthly_so_rate_dps = monthly_so_rate_dps[, .(value=sum(value, na.rm = TRUE)), by=c('id', 'date', 'expected_days', 'dps')]
   
-  dups = monthly_so_rate_dps[duplicated(monthly_so_rate_dps, by=c('id', 'date'))]
-  dups = merge(dups, monthly_so_rate_dps, by=c('id', 'date'))
+  dups = monthly_so_rate_dps[duplicated(monthly_so_rate_dps, by=c('id', 'date', 'dps'))]
+  dups = merge(dups, monthly_so_rate_dps, by=c('id', 'date', 'dps'))
   stopifnot(nrow(dups)==0)
   
   monthly_so_rate_dps = merge(monthly_so_rate_dps, facs_per_district, by=c('dps', 'date'))
