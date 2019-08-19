@@ -1,0 +1,86 @@
+{
+  "width": 300,
+  "data": {
+      "name": "mi_das_data",
+      "values": "deptocode,DAS,Baciloscopias_2016,2016,Baciloscopias_2017,2017,Baciloscopias_2018,2018\n4,DAS Chimaltenango,3770,NaN,3732,10.14,5516,33.37\n5,DAS Escuintla,10572,44.32,10867,40.66,9844,26.87\n21,DAS Jalapa,2907,NaN,4269,7.56,6027,17.91\n11,DAS Retalhuleu,4928,26.18,5476,22.97,6856,30.99\n10,DAS Suchitepequez,7334,NaN,7479,61.49,13617,60.09\n8,DAS Totonicapan,1097,NaN,1812,51.00,3823,53.47\n",
+      "format": {
+        "type": "csv"
+      }
+  },
+  "vconcat": [{
+      "transform": [
+            {"fold": ["2016", "2017", "2018"]}
+      ],
+      "mark": {
+        "type": "point",
+        "invalid": "filter"
+      },
+      "encoding": {
+        "color": {"field": "key", "type": "nominal",
+          "axis": {
+              "title": "Año"
+          },
+          "scale": {"scheme": "category10"}
+        },
+        "x": {"field": "value", "type": "quantitative", 
+          "axis": {
+            "title": "% Muestras inadecuadas"
+          }
+        },
+        "y": {
+          "field": "DAS",
+          "type": "nominal",
+          "axis": {
+            "grid": true,
+            "title": ""
+          }
+        }
+      }
+    },
+    {
+      "transform": [
+            {"fold": ["Baciloscopias_2016", "Baciloscopias_2017", "Baciloscopias_2018"]},
+            {
+              "lookup": "key",
+              "from": {
+                "data": {
+                  "values": [
+                    { "key": "Baciloscopias_2016", "rep": "2016" },
+                    { "key": "Baciloscopias_2017", "rep": "2017" },
+                    { "key": "Baciloscopias_2018", "rep": "2018" }
+                  ]
+                },
+                "key": "key",
+                "fields": ["rep"]
+              }
+            }
+      ],
+      "mark": {
+        "type": "bar",
+        "invalid": "filter"
+      },
+      "encoding": {
+        "color": {"field": "rep", "type": "nominal",
+          "axis": {
+              "title": ""
+          },
+          "scale": {"scheme": "category10"}
+        },
+        "order": {"field": "rep", "type": "quantitative"},
+        "x": {"field": "value", "type": "quantitative", 
+          "axis": {
+            "title": "Baciloscopías por año"
+          }
+        },
+        "y": {
+          "field": "DAS",
+          "type": "nominal",
+          "axis": {
+            "grid": true,
+            "title": ""
+          }
+        }
+      }
+    }
+  ]
+}
