@@ -1,0 +1,225 @@
+{"$schema": "https://vega.github.io/schema/vega/v3.0.json",
+  "width": 600,
+  "height": 600,
+  "autosize": "none",
+  "padding": 50,
+  "signals": [
+    {
+      "name": "vuelta_year",
+      "value": 2019
+    },
+    {
+      "name": "translate0",
+      "update": "width / 2"
+    },
+    {
+      "name": "translate1",
+      "update": "height / 2"
+    }
+  ],
+  "projections": [
+    {
+      "type": "mercator",
+      "name": "projection_deptos",
+      "size": {"signal": "[width, height]"},
+      "fit": {"signal": "data('deptos_data')"}
+    },
+    {
+      "type": "mercator",
+      "name": "projection_munis",
+      "size": {"signal": "[width, height]"},
+      "fit": {"signal": "data('munis_data')"}
+    },
+    {
+      "type": "mercator",
+      "name": "projection_munis_2",
+      "size": {"signal": "[width, height]"},
+      "fit": {"signal": "data('munis_data')"}
+    }
+  ],
+  "data": [
+    {
+      "name": "deptos_data",
+      "url": "https://bodegona.nyc3.digitaloceanspaces.com/data/GIS-GT/gt-deptos-lowq-2017.geojson",
+      "format": {
+        "type": "json",
+        "property": "features"
+      },
+      "transform": [
+        {"type": "filter", "expr": "datum.properties.CODIGO!='2300'"}
+      ]
+    },
+    {
+      "name": "munis_data",
+      "url": "https://bodegona.nyc3.digitaloceanspaces.com/data/GIS-GT/gt-munis-lowq-2017_splits_from_2011.geojson",
+      "format": {
+        "type": "json",
+        "property": "features"
+      },
+      "transform": [
+        {
+          "type": "filter",
+          "expr": "(datum.properties.YearSplitted == 0) || (datum.properties.SplitType == 'OldParent' && datum.properties.YearSplitted >= vuelta_year) || (datum.properties.SplitType == 'NewParent' && datum.properties.YearSplitted < vuelta_year)  || (datum.properties.SplitType == 'NewChild' && datum.properties.YearSplitted < vuelta_year)"
+        }
+      ]
+    },
+    {
+      "name": "mi_das_data",
+      "values": "deptocode,DAS,Baciloscopias_2016,p_muestras_i_2016,Baciloscopias_2017,p_muestras_i_2017,Baciloscopias_2018,p_muestras_i_2018\n4,DAS Chimaltenango,3770,,3732,10.14%,5516,33.37%\n5,DAS Escuintla,10572,44.32%,10867,40.66%,9844,26.87%\n21,DAS Jalapa,2907,,4269,7.56%,6027,17.91%\n11,DAS Retalhuleu,4928,26.18%,5476,22.97%,6856,30.99%\n10,DAS Suchitepequez,7334,,7479,61.49%,13617,60.09%\n8,DAS Totonicapan,1097,,1812,51.00%,3823,53.47%\n",
+      "format": {
+        "type": "csv"
+      }
+    },
+    {
+      "name": "mi_muni_data_2017",
+      "values": "municode,municipio,p_muestras_inadecuadas_2017\n1101,RETALHULEU,20.02\n1109,EL ASINTAL,20.02\n1106,SAN ANDRES VILLA SECA,20.02\n1107,CHAMPERICO,21.37\n1102,SAN SEBASTIAN,20.02\n501,ESCUINTLA,67.31\n502,SANTA LUCIA,58.62\n507,LA GOMERA,37.77\n513,NUEVA CONCEPCION,35.15\n506,TIQUISATE,50.3\n509,PUERTO SAN JOSE,23.31\n505,MASAGUA,48.78\n1001,MAZATENANGO  ,57.69\n1010,SAN ANTONIO  ,60.21\n1002,CUYOTENANGO,56.7\n1013,CHICACAO,35.49\n1014,PATULUL,ND\n1006,SANTO DOMINGO,81.5\n",
+      "format": {
+        "type": "csv"
+      },
+      "transform": [
+        {
+          "type": "lookup",
+          "from": "munis_data",
+          "key": "properties.COD_MUNI__",
+          "fields": ["municode"],
+          "as": ["geo"]
+        },
+        {
+          "type": "geojson",
+          "geojson": "geo",
+          "signal": "muni_data2_signal"
+        },
+        {
+          "type": "formula",
+          "expr": "parseFloat(datum.p_muestras_inadecuadas_2017)",
+          "as": "p_muestras_inadecuadas_2017"
+        }
+      ]
+    }
+  ],
+  "marks": [
+    {
+      "type": "shape",
+      "from": {
+        "data": "munis_data"
+      },
+      "encode": {
+        "update": {
+          "strokeWidth": {
+            "value": 0.25
+          },
+          "stroke": { 
+            "value": "gray"
+          },
+          "fill": {
+            "value": "white"
+          },
+          "fillOpacity": {
+            "value": 0.2
+          }
+        },
+        "hover": {
+          "strokeWidth": {
+            "value": 2
+          }
+        }
+      },
+      "transform": [
+        {
+          "type": "geoshape",
+          "projection": "projection_munis"
+        }
+      ]
+    },
+    {
+      "type": "shape",
+      "from": {
+        "data": "mi_muni_data_2017"
+      },
+      "encode": {
+        "update": {
+          "strokeWidth": {
+            "value": 0.25
+          },
+          "stroke": { 
+            "value": "gray"
+          },
+          "fill": {
+            "scale": "escala_munis", "field": "p_muestras_inadecuadas_2017"
+          },
+          "fillOpacity": {
+            "value": 0.9
+          },
+          "tooltip": { 
+            "signal" : "{\"title\": datum[\"geo\"].properties.DEPTO__ + ' - ' + datum[\"geo\"].properties.NOMBRE__, \"Muestras inadecuadas\": datum.p_muestras_inadecuadas_2017 + '%' }" 
+          }
+        },
+        "hover": {
+          "strokeWidth": {
+            "value": 2
+          }
+        }
+      },
+      "transform": [
+        {
+          "type": "geoshape",
+          "projection": "projection_munis_2",
+          "field": "datum.geo"
+        }
+      ]
+    },
+    {
+      "type": "shape",
+      "from": {
+        "data": "deptos_data"
+      },
+      "encode": {
+        "update": {
+          "strokeWidth": {
+            "value": 0.8
+          },
+          "stroke": { 
+            "value": "black"
+          },
+          "fill": {
+            "value": "#ddddee"
+          },
+          "fillOpacity": {
+            "value": 0.0
+          }
+        },
+        "hover": {
+          "strokeWidth": {
+            "value": 2
+          }
+        }
+      },
+      "transform": [
+        {
+          "type": "geoshape",
+          "projection": "projection_deptos"
+        }
+      ]
+    }
+  ],
+  "legends": [
+    {
+      "fill": "escala_munis",
+      "orient": "none",
+      "legendX": 540,
+      "legendY": 400,
+      "titleOrient": "left",
+      "title": "MUESTRAS INADECUADAS (%)"
+    }
+  ],
+  "scales": [
+    {
+      "name": "escala_munis",
+      "type": "linear",
+      "domain": {"data": "mi_muni_data_2017", "field": "p_muestras_inadecuadas_2017"},
+      "range": {"scheme": "goldgreen"},
+      "interpolate": "hcl",
+      "zero": false
+    }
+  ]
+}
