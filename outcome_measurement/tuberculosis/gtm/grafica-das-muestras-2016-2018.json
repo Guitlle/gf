@@ -1,86 +1,380 @@
 {
+  "$schema": "https://vega.github.io/schema/vega/v5.json",
+  "autosize": "pad",
+  "padding": 5,
   "width": 300,
-  "data": {
+  "height": 300,
+  "style": "cell",
+  "data": [
+    {
       "name": "mi_das_data",
       "values": "deptocode,DAS,Baciloscopias_2016,2016,Baciloscopias_2017,2017,Baciloscopias_2018,2018\n4,DAS Chimaltenango,3770,NaN,3732,10.14,5516,33.37\n5,DAS Escuintla,10572,44.32,10867,40.66,9844,26.87\n21,DAS Jalapa,2907,NaN,4269,7.56,6027,17.91\n11,DAS Retalhuleu,4928,26.18,5476,22.97,6856,30.99\n10,DAS Suchitepequez,7334,NaN,7479,61.49,13617,60.09\n8,DAS Totonicapan,1097,NaN,1812,51.00,3823,53.47\n",
-      "format": {
-        "type": "csv"
-      }
-  },
-  "vconcat": [{
+      "format": {"type": "csv", "delimiter": ","}
+    },
+    {
+      "name": "source_0",
+      "values": [
+        {"key": "Baciloscopias_2016", "rep": "2016"},
+        {"key": "Baciloscopias_2017", "rep": "2017"},
+        {"key": "Baciloscopias_2018", "rep": "2018"}
+      ]
+    },
+    {"name": "source_1", "values": [{"X": ""}]},
+    {
+      "name": "data_1",
+      "source": "mi_das_data",
       "transform": [
-            {"fold": ["2016", "2017", "2018"]}
-      ],
-      "mark": {
-        "type": "point",
-        "invalid": "filter"
+        {
+          "type": "fold",
+          "fields": ["2016", "2017", "2018"],
+          "as": ["key", "value"]
+        }
+      ]
+    },
+    {
+      "name": "data_2",
+      "source": "data_1",
+      "transform": [
+        {
+          "type": "filter",
+          "expr": "datum[\"value\"] !== null && !isNaN(datum[\"value\"])"
+        }
+      ]
+    },
+    {
+      "name": "data_3",
+      "source": "mi_das_data",
+      "transform": [
+        {
+          "type": "fold",
+          "fields": [
+            "Baciloscopias_2016",
+            "Baciloscopias_2017",
+            "Baciloscopias_2018"
+          ],
+          "as": ["key", "value"]
+        },
+        {
+          "type": "lookup",
+          "from": "source_0",
+          "key": "key",
+          "fields": ["key"],
+          "values": ["rep"]
+        }
+      ]
+    },
+    {
+      "name": "data_4",
+      "source": "data_3",
+      "transform": [
+        {
+          "type": "filter",
+          "expr": "datum[\"value\"] !== null && !isNaN(datum[\"value\"])"
+        }
+      ]
+    }
+  ],
+  "marks": [
+    {
+      "name": "layer_0_layer_0_pathgroup",
+      "type": "group",
+      "from": {
+        "facet": {
+          "name": "faceted_path_layer_0_layer_0_main",
+          "data": "data_1",
+          "groupby": ["DAS"]
+        }
       },
-      "encoding": {
-        "color": {"field": "key", "type": "nominal",
-          "axis": {
-              "title": "Año"
-          },
-          "scale": {"scheme": "category10"}
-        },
-        "x": {"field": "value", "type": "quantitative", 
-          "axis": {
-            "title": "% Muestras inadecuadas"
+      "encode": {
+        "update": {
+          "width": {"field": {"group": "width"}},
+          "height": {"field": {"group": "height"}}
+        }
+      },
+      "marks": [
+        {
+          "name": "layer_0_layer_0_marks",
+          "type": "line",
+          "style": ["line"],
+          "sort": {"field": "datum[\"key\"]"},
+          "from": {"data": "faceted_path_layer_0_layer_0_main"},
+          "encode": {
+            "update": {
+              "stroke": {"scale": "color", "field": "DAS"},
+              "x": {"scale": "x", "field": "key"},
+              "y": {"scale": "layer_0_y", "field": "value"},
+              "defined": {
+                "signal": "datum[\"value\"] !== null && !isNaN(datum[\"value\"])"
+              }
+            }
           }
-        },
-        "y": {
-          "field": "DAS",
-          "type": "nominal",
-          "axis": {
-            "grid": true,
-            "title": ""
-          }
+        }
+      ]
+    },
+    {
+      "name": "layer_0_layer_1_marks",
+      "type": "symbol",
+      "style": ["point"],
+      "from": {"data": "data_2"},
+      "encode": {
+        "update": {
+          "opacity": {"value": 1},
+          "fill": {"scale": "color", "field": "DAS"},
+          "x": {"scale": "x", "field": "key"},
+          "y": {"scale": "layer_0_y", "field": "value"}
         }
       }
     },
     {
-      "transform": [
-            {"fold": ["Baciloscopias_2016", "Baciloscopias_2017", "Baciloscopias_2018"]},
-            {
-              "lookup": "key",
-              "from": {
-                "data": {
-                  "values": [
-                    { "key": "Baciloscopias_2016", "rep": "2016" },
-                    { "key": "Baciloscopias_2017", "rep": "2017" },
-                    { "key": "Baciloscopias_2018", "rep": "2018" }
-                  ]
-                },
-                "key": "key",
-                "fields": ["rep"]
+      "name": "layer_1_layer_0_pathgroup",
+      "type": "group",
+      "from": {
+        "facet": {
+          "name": "faceted_path_layer_1_layer_0_main",
+          "data": "data_3",
+          "groupby": ["DAS"]
+        }
+      },
+      "encode": {
+        "update": {
+          "width": {"field": {"group": "width"}},
+          "height": {"field": {"group": "height"}}
+        }
+      },
+      "marks": [
+        {
+          "name": "layer_1_layer_0_marks",
+          "type": "line",
+          "style": ["line"],
+          "sort": {"field": "datum[\"rep\"]"},
+          "from": {"data": "faceted_path_layer_1_layer_0_main"},
+          "encode": {
+            "update": {
+              "strokeWidth": {"value": 2},
+              "strokeDash": {"value": [6, 4]},
+              "stroke": {"scale": "color", "field": "DAS"},
+              "x": {"scale": "x", "field": "rep"},
+              "y": {"scale": "layer_1_y", "field": "value"},
+              "defined": {
+                "signal": "datum[\"value\"] !== null && !isNaN(datum[\"value\"])"
               }
             }
-      ],
-      "mark": {
-        "type": "bar",
-        "invalid": "filter"
-      },
-      "encoding": {
-        "color": {"field": "rep", "type": "nominal",
-          "axis": {
-              "title": ""
-          },
-          "scale": {"scheme": "category10"}
-        },
-        "order": {"field": "rep", "type": "quantitative"},
-        "x": {"field": "value", "type": "quantitative", 
-          "axis": {
-            "title": "Baciloscopías por año"
-          }
-        },
-        "y": {
-          "field": "DAS",
-          "type": "nominal",
-          "axis": {
-            "grid": true,
-            "title": ""
           }
         }
+      ]
+    },
+    {
+      "name": "layer_1_layer_1_marks",
+      "type": "symbol",
+      "style": ["point"],
+      "from": {"data": "data_4"},
+      "encode": {
+        "update": {
+          "opacity": {"value": 1},
+          "fill": {"scale": "color", "field": "DAS"},
+          "x": {"scale": "x", "field": "rep"},
+          "y": {"scale": "layer_1_y", "field": "value"}
+        }
       }
+    },
+    {
+      "name": "layer_2_pathgroup",
+      "type": "group",
+      "from": {
+        "facet": {
+          "name": "faceted_path_layer_2_main",
+          "data": "source_1",
+          "groupby": ["X"]
+        }
+      },
+      "encode": {
+        "update": {
+          "width": {"field": {"group": "width"}},
+          "height": {"field": {"group": "height"}}
+        }
+      },
+      "marks": [
+        {
+          "name": "layer_2_marks",
+          "type": "line",
+          "style": ["line"],
+          "from": {"data": "faceted_path_layer_2_main"},
+          "encode": {
+            "update": {
+              "strokeDash": {"value": [6, 4]},
+              "stroke": {"value": "#4c78a8"},
+              "opacity": {"scale": "opacity", "field": "X"},
+              "x": {"signal": "width", "mult": 0.5},
+              "y": {"signal": "height", "mult": 0.5}
+            }
+          }
+        }
+      ]
     }
-  ]
+  ],
+  "scales": [
+    {
+      "name": "x",
+      "type": "point",
+      "domain": {
+        "fields": [
+          {"data": "data_1", "field": "key"},
+          {"data": "data_2", "field": "key"},
+          {"data": "data_3", "field": "rep"},
+          {"data": "data_4", "field": "rep"}
+        ],
+        "sort": true
+      },
+      "range": [0, {"signal": "width"}],
+      "padding": 0.5
+    },
+    {
+      "name": "color",
+      "type": "ordinal",
+      "domain": {
+        "fields": [
+          {"data": "data_1", "field": "DAS"},
+          {"data": "data_2", "field": "DAS"},
+          {"data": "data_3", "field": "DAS"},
+          {"data": "data_4", "field": "DAS"}
+        ],
+        "sort": true
+      },
+      "range": "category"
+    },
+    {
+      "name": "opacity",
+      "type": "point",
+      "domain": {"data": "source_1", "field": "X", "sort": true},
+      "range": [0.3, 0.8]
+    },
+    {
+      "name": "layer_0_y",
+      "type": "linear",
+      "domain": {
+        "fields": [
+          {"data": "data_1", "field": "value"},
+          {"data": "data_2", "field": "value"}
+        ]
+      },
+      "range": [{"signal": "height"}, 0],
+      "nice": true,
+      "zero": true
+    },
+    {
+      "name": "layer_1_y",
+      "type": "linear",
+      "domain": {
+        "fields": [
+          {"data": "data_3", "field": "value"},
+          {"data": "data_4", "field": "value"}
+        ]
+      },
+      "range": [{"signal": "height"}, 0],
+      "nice": true,
+      "zero": true
+    }
+  ],
+  "axes": [
+    {
+      "scale": "x",
+      "orient": "bottom",
+      "grid": true,
+      "gridScale": "layer_0_y",
+      "domain": false,
+      "labels": false,
+      "maxExtent": 0,
+      "minExtent": 0,
+      "ticks": false,
+      "zindex": 0
+    },
+    {
+      "scale": "layer_0_y",
+      "orient": "left",
+      "grid": true,
+      "gridScale": "x",
+      "tickCount": {"signal": "ceil(height/40)"},
+      "domain": false,
+      "labels": false,
+      "maxExtent": 0,
+      "minExtent": 0,
+      "ticks": false,
+      "zindex": 0
+    },
+    {
+      "scale": "layer_1_y",
+      "orient": "right",
+      "grid": true,
+      "gridScale": "x",
+      "tickCount": {"signal": "ceil(height/40)"},
+      "domain": false,
+      "labels": false,
+      "maxExtent": 0,
+      "minExtent": 0,
+      "ticks": false,
+      "zindex": 0
+    },
+    {
+      "scale": "x",
+      "orient": "bottom",
+      "grid": false,
+      "title": "Year",
+      "labelAlign": "right",
+      "labelAngle": 270,
+      "labelBaseline": "middle",
+      "zindex": 0
+    },
+    {
+      "scale": "layer_0_y",
+      "orient": "left",
+      "grid": false,
+      "title": "Inadequate samples",
+      "labelOverlap": true,
+      "tickCount": {"signal": "ceil(height/40)"},
+      "zindex": 0
+    },
+    {
+      "scale": "layer_1_y",
+      "orient": "right",
+      "grid": false,
+      "title": "Bacilloscopies per year",
+      "labelOverlap": true,
+      "tickCount": {"signal": "ceil(height/40)"},
+      "zindex": 0
+    }
+  ],
+  "legends": [
+    {
+      "stroke": "color",
+      "gradientLength": {"signal": "clamp(height, 64, 200)"},
+      "symbolType": "circle",
+      "title": "DAS",
+      "fill": "color",
+      "encode": {"symbols": {"update": {"opacity": {"value": 1}}}}
+    },
+    {
+      "title": "Bacilloscopies",
+      "opacity": "opacity",
+      "symbolType": "stroke",
+      "encode": {"symbols": {"update": 
+        {
+          "stroke": {"value": "#4c78a8"},
+          "strokeWidth": {"value": 2},
+          "strokeDash": {"value": [4,2]}
+        }
+      }}
+    },
+    {
+      "title": "Inadequate samples (%)",
+      "opacity": "opacity",
+      "symbolType": "stroke",
+      "encode": {"symbols": {"update": 
+        {
+          "stroke": {"value": "#4c78a8"},
+          "strokeWidth": {"value": 2}
+        }
+      }}
+    }
+  ],
+  "config": {"legend": {"strokeDash": [2, 1]}}
 }
