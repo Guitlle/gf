@@ -72,7 +72,7 @@
     },
     {
       "name": "mi_muni_data_2017",
-      "values": "municode,municipio,p_muestras_inadecuadas_2017\n1101,RETALHULEU,20.02\n1109,EL ASINTAL,20.02\n1106,SAN ANDRES VILLA SECA,20.02\n1107,CHAMPERICO,21.37\n1102,SAN SEBASTIAN,20.02\n501,ESCUINTLA,67.31\n502,SANTA LUCIA,58.62\n507,LA GOMERA,37.77\n513,NUEVA CONCEPCION,35.15\n506,TIQUISATE,50.3\n509,PUERTO SAN JOSE,23.31\n505,MASAGUA,48.78\n1001,MAZATENANGO  ,57.69\n1010,SAN ANTONIO  ,60.21\n1002,CUYOTENANGO,56.7\n1013,CHICACAO,35.49\n1014,PATULUL,ND\n1006,SANTO DOMINGO,81.5\n",
+      "values": "municode,municipio,p_muestras_inadecuadas_2017\n1101,RETALHULEU,20.02\n1109,EL ASINTAL,20.02\n1106,SAN ANDRES VILLA SECA,20.02\n1107,CHAMPERICO,21.37\n1102,SAN SEBASTIAN,20.02\n501,ESCUINTLA,67.31\n502,SANTA LUCIA,58.62\n507,LA GOMERA,37.77\n513,NUEVA CONCEPCION,35.15\n506,TIQUISATE,50.3\n509,PUERTO SAN JOSE,23.31\n505,MASAGUA,48.78\n1001,MAZATENANGO  ,57.69\n1010,SAN ANTONIO  ,60.21\n1002,CUYOTENANGO,56.7\n1013,CHICACAO,35.49\n1006,SANTO DOMINGO,81.5\n401,Chimaltenango,10.14\n2101,Jalapa,7.56\n801,Totonicapan,51.00\n",
       "format": {
         "type": "csv"
       },
@@ -106,7 +106,7 @@
       "encode": {
         "update": {
           "strokeWidth": {
-            "value": 0.25
+            "value": 0.15
           },
           "stroke": { 
             "value": "gray"
@@ -139,10 +139,10 @@
       "encode": {
         "update": {
           "strokeWidth": {
-            "value": 0.25
+            "value": 1.8
           },
           "stroke": { 
-            "value": "gray"
+            "value": "#666666"
           },
           "fill": {
             "scale": "escala_munis", "field": "p_muestras_inadecuadas_2017"
@@ -176,10 +176,14 @@
       "encode": {
         "update": {
           "strokeWidth": {
-            "value": 0.8
+            "value": 1.3
+          },
+
+          "strokeOpacity": {
+            "value": 0.5
           },
           "stroke": { 
-            "value": "black"
+            "value": "#000000"
           },
           "fill": {
             "value": "#ddddee"
