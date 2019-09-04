@@ -1,0 +1,208 @@
+{"$schema": "https://vega.github.io/schema/vega/v3.0.json",
+  "width": 500,
+  "height": 500,
+  "autosize": "none",
+  "padding": 50,
+  "title": "Average by department between 2016-2018",
+  "signals": [
+    {
+      "name": "vuelta_year",
+      "value": 2019
+    },
+    {
+      "name": "translate0",
+      "update": "width / 2"
+    },
+    {
+      "name": "translate1",
+      "update": "height / 2"
+    }
+  ],
+  "projections": [
+    {
+      "type": "mercator",
+      "name": "projection_deptos",
+      "size": {"signal": "[width, height]"},
+      "fit": {"signal": "data('deptos_data')"}
+    },
+    {
+      "type": "mercator",
+      "name": "projection_munis",
+      "size": {"signal": "[width, height]"},
+      "fit": {"signal": "data('munis_data')"}
+    },
+    {
+      "type": "mercator",
+      "name": "projection_munis_2",
+      "size": {"signal": "[width, height]"},
+      "fit": {"signal": "data('munis_data')"}
+    }
+  ],
+  "data": [
+    {
+      "name": "deptos_data",
+      "url": "https://bodegona.nyc3.digitaloceanspaces.com/data/GIS-GT/gt-deptos-lowq-2017.geojson",
+      "format": {
+        "type": "json",
+        "property": "features"
+      },
+      "transform": [
+        {"type": "filter", "expr": "datum.properties.CODIGO!='2300'"}
+      ]
+    },
+    {
+      "name": "munis_data",
+      "url": "https://bodegona.nyc3.digitaloceanspaces.com/data/GIS-GT/gt-munis-lowq-2017_splits_from_2011.geojson",
+      "format": {
+        "type": "json",
+        "property": "features"
+      },
+      "transform": [
+        {
+          "type": "filter",
+          "expr": "(datum.properties.YearSplitted == 0) || (datum.properties.SplitType == 'OldParent' && datum.properties.YearSplitted >= vuelta_year) || (datum.properties.SplitType == 'NewParent' && datum.properties.YearSplitted < vuelta_year)  || (datum.properties.SplitType == 'NewChild' && datum.properties.YearSplitted < vuelta_year)"
+        }
+      ]
+    },
+    {
+      "name": "mi_das_data",
+      "values": "deptocode,DAS,B2016,PMI2016,B2017,PMI2017,B2018,PMI2018,Region,RegionNombre\n16,DAS Alta Verapaz,11454,49.16%,16677,70.97%,20153,57.40%,2,Norte\n4,DAS Chimaltenango,3770,,3732,10.14%,5516,33.37%,5,Central\n20,DAS Chiquimula,1384,,1286,50.89%,2400,46.03%,3,Nororiente\n2,DAS El Progreso,798,,838,43.08%,794,40.19%,3,Nororiente\n5,DAS Escuintla,10572,44.32%,10867,40.66%,9844,26.87%,5,Central\n1,DAS Guatemala Central,7546,,7482,,7584,50.68%,1,Metropolitana\n1,DAS Guatemala NorOccidente,3883,27.54%,4098,43.35%,3376,51.69%,1,Metropolitana\n1,DAS Guatemala NorOriente,6167,,5183,61.80%,3433,33.98%,1,Metropolitana\n1,DAS Guatemala Sur,3989,48.59%,4972,54.35%,5159,,1,Metropolitana\n13,DAS Huehuetenango,5268,51.31%,8949,31.88%,9766,,7,Noroccidente\n14,DAS Ixcan,2459,36.37%,2286,31.36%,2127,31.66%,7,Noroccidente\n14,DAS Ixil,3249,19.59%,5229,22%,4810,34%,7,Noroccidente\n18,DAS Izabal,2702,,3227,25.67%,3644,36.00%,3,Nororiente\n21,DAS Jalapa,2907,,4269,7.56%,6027,17.91%,4,Suroriente\n22,DAS Jutiapa,2900,,3053,30.64%,3012,42.71%,4,Suroriente\n17,DAS Petén Norte,3568,,3645,69.34%,3245,58.00%,8,Peten\n17,DAS Petén SurOccidente,4393,55.57%,4021,54.39%,5019,61.54%,8,Peten\n17,DAS Petén SurOriente,1094,55.24%,1376,42.25%,2442,44.82%,8,Peten\n9,DAS Quetzaltenango,12698,67.44%,21594,26.60%,21138,45.94%,6,Suroccidente\n14,DAS Quiché,5107,,5662,35.65%,5224,35.35%,7,Noroccidente\n11,DAS Retalhuleu,4928,26.18%,5476,22.97%,6856,30.99%,6,Suroccidente\n12,DAS San Marcos,10691,,13380,17.61,14007,,6,Suroccidente\n6,DAS Santa Rosa,2697,,3564,35.82%,4287,41.70%,4,Suroriente\n10,DAS Suchitepéquez,7334,,7479,61.49%,13617,60.09%,6,Suroccidente\n8,DAS Totonicapán,1097,,1812,51.00%,3823,53.47%,6,Suroccidente\n19,DAS Zacapa,1646,35.84%,2632,42.56%,2865,45.05%,3,Nororiente\n7,DAS Sololá,2302,37.71%,2460,,3024,,6,Suroccidente\n15,DAS Baja Verapaz,1711,,2182,,2579,28.36,2,Norte\n3,DAS Sacatepéquez,3535,,2641,,2868,,5,Central\n",
+      "format": {
+        "type": "csv"
+      },
+      "transform": [
+        {
+          "type": "formula", 
+          "as": "indice", 
+          "expr": "datum.deptocode==1? '101' : datum.deptocode + '00'"
+        },
+        {
+          "type":  "formula", 
+          "as": "a", 
+          "expr": "(parseFloat(datum.PMI2018)||0) + (parseFloat(datum.PMI2017)||0) + (parseFloat(datum.PMI2016)||0)"
+        },
+        {
+          "type":  "formula", 
+          "as": "b", 
+          "expr": "((datum.PMI2018?1:0) + (datum.PMI2017?1:0) +  (datum.PMI2016?1:0)) "
+        },
+        {
+          "type": "aggregate",
+          "fields": ["a", "b"],
+          "groupby": ["indice"],
+          "ops": ["sum", "sum"],
+          "as": ["c", "d"]
+        },
+        {
+          "type":  "formula", 
+          "as": "i", 
+          "expr": "round(datum.c/datum.d)"
+        },
+        {
+          "type": "lookup",
+          "from": "deptos_data",
+          "key": "properties.CODIGO",
+          "fields": ["indice"],
+          "as": ["geo"]
+        },
+        {
+          "type": "geojson",
+          "geojson": "geo",
+          "signal": "deptos_data2_signal"
+        }
+      ]
+    }
+  ],
+  "marks": [
+    {
+      "type": "shape",
+      "from": {
+        "data": "munis_data"
+      },
+      "encode": {
+        "update": {
+          "strokeWidth": {
+            "value": 0.15
+          },
+          "stroke": { 
+            "value": "gray"
+          },
+          "fill": {
+            "value": "white"
+          },
+          "fillOpacity": {
+            "value": 0.2
+          }
+        },
+        "hover": {
+          "strokeWidth": {
+            "value": 2
+          }
+        }
+      },
+      "transform": [
+        {
+          "type": "geoshape",
+          "projection": "projection_munis"
+        }
+      ]
+    },
+    {
+      "type": "shape",
+      "from": {
+        "data": "mi_das_data"
+      },
+      "encode": {
+        "update": {
+          "strokeWidth": {
+            "value": 1
+          },
+          "stroke": { 
+            "value": "#666666"
+          },
+          "fill": {
+            "scale": "escala_das", "field": "i"
+          },
+          "fillOpacity": {
+            "value": 0.9
+          },
+          "tooltip": { 
+            "signal" : "{\"title\": datum[\"geo\"].properties.CODIGO + ' - ' + datum[\"geo\"].properties.DEPARTAMEN, \"Muestras inadecuadas\": datum.i + '%' }" 
+          }
+        },
+        "hover": {
+          "strokeWidth": {
+            "value": 2
+          }
+        }
+      },
+      "transform": [
+        {
+          "type": "geoshape",
+          "projection": "projection_munis_2",
+          "field": "datum.geo"
+        }
+      ]
+    }
+  ],
+  "legends": [
+    {
+      "fill": "escala_das",
+      "orient": "none",
+      "legendX": 430,
+      "legendY": 20,
+      "titleOrient": "left",
+      "title": "% inadequate samples"
+    }
+  ],
+  "scales": [
+    {
+      "name": "escala_das",
+      "type": "linear",
+      "domain": {"data": "mi_das_data", "field": "i"},
+      "range": {"scheme": "goldgreen"},
+      "interpolate": "hcl",
+      "zero": false
+    }
+  ]
+}

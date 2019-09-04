@@ -1,0 +1,114 @@
+{
+  "data": {
+      "name": "mi_das_data",
+      "values": "deptocode,DAS,B2016,PMI2016,B2017,PMI2017,B2018,PMI2018,Region,RegionNombre\n16,DAS Alta Verapaz,11454,49.16%,16677,70.97%,20153,57.40%,2,Norte\n4,DAS Chimaltenango,3770,,3732,10.14%,5516,33.37%,5,Central\n20,DAS Chiquimula,1384,,1286,50.89%,2400,46.03%,3,Nororiente\n2,DAS El Progreso,798,,838,43.08%,794,40.19%,3,Nororiente\n5,DAS Escuintla,10572,44.32%,10867,40.66%,9844,26.87%,5,Central\n1,DAS Guatemala Central,7546,,7482,,7584,50.68%,1,Metropolitana\n1,DAS Guatemala NorOccidente,3883,27.54%,4098,43.35%,3376,51.69%,1,Metropolitana\n1,DAS Guatemala NorOriente,6167,,5183,61.80%,3433,33.98%,1,Metropolitana\n1,DAS Guatemala Sur,3989,48.59%,4972,54.35%,5159,,1,Metropolitana\n13,DAS Huehuetenango,5268,51.31%,8949,31.88%,9766,,7,Noroccidente\n14,DAS Ixcan,2459,36.37%,2286,31.36%,2127,31.66%,7,Noroccidente\n14,DAS Ixil,3249,19.59%,5229,22%,4810,34%,7,Noroccidente\n18,DAS Izabal,2702,,3227,25.67%,3644,36.00%,3,Nororiente\n21,DAS Jalapa,2907,,4269,7.56%,6027,17.91%,4,Suroriente\n22,DAS Jutiapa,2900,,3053,30.64%,3012,42.71%,4,Suroriente\n17,DAS Petén Norte,3568,,3645,69.34%,3245,58.00%,8,Peten\n7,DAS Petén SurOccidente,4393,55.57%,4021,54.39%,5019,61.54%,8,Peten\n17,DAS Petén SurOriente,1094,55.24%,1376,42.25%,2442,44.82%,8,Peten\n9,DAS Quetzaltenango,12698,67.44%,21594,26.60%,21138,45.94%,6,Suroccidente\n14,DAS Quiché,5107,,5662,35.65%,5224,35.35%,7,Noroccidente\n11,DAS Retalhuleu,4928,26.18%,5476,22.97%,6856,30.99%,6,Suroccidente\n12,DAS San Marcos,10691,,13380,17.61,14007,,6,Suroccidente\n6,DAS Santa Rosa,2697,,3564,35.82%,4287,41.70%,4,Suroriente\n10,DAS Suchitepéquez,7334,,7479,61.49%,13617,60.09%,6,Suroccidente\n8,DAS Totonicapán,1097,,1812,51.00%,3823,53.47%,6,Suroccidente\n19,DAS Zacapa,1646,35.84%,2632,42.56%,2865,45.05%,3,Nororiente\n7,DAS Sololá,2302,37.71%,2460,,3024,,6,Suroccidente\n15,DAS Baja Verapaz,1711,,2182,,2579,28.36,2,Norte\n3,DAS Sacatepéquez,3535,,2641,,2868,,5,Central\n",
+      "format": {
+        "type": "csv"
+      }
+  },
+  "vconcat": [
+    {
+      "height": 100,
+      "transform": [
+            {"fold": ["B2016", "B2017", "B2018"]},
+            {
+              "lookup": "key",
+              "from": {
+                "data": {
+                  "values": [
+                    { "key": "B2016", "rep": "2016" },
+                    { "key": "B2017", "rep": "2017" },
+                    { "key": "B2018", "rep": "2018" }
+                  ]
+                },
+                "key": "key",
+                "fields": ["rep"]
+              }
+            }
+      ],
+      "mark": {
+        "type": "line",
+        "point": {
+          "filled": false,
+          "fill": "white"
+        },
+        "invalid": "filter"
+      },
+      "encoding": {
+        "facet": {
+          "field": "RegionNombre",
+          "type": "ordinal",
+          "rows": 1,
+          "title": "Sputum samples by region"
+        },
+        "order": {"field": "rep", "type": "quantitative"},
+        "y": {
+          "field": "value", 
+          "type": "quantitative",
+          "aggregate": "sum", 
+          "axis": {
+            "title": ""
+          }
+        },
+        "x": {
+          "field": "rep",
+          "type": "nominal",
+          "axis": {
+            "grid": true,
+            "title": ""
+          }
+        }
+      }
+    },
+    {
+      "height": 100,
+      "transform": [
+            {"fold": ["PMI2016", "PMI2017", "PMI2018"]},
+            {
+              "lookup": "key",
+              "from": {
+                "data": {
+                  "values": [
+                    { "key": "PMI2016", "rep": "2016" },
+                    { "key": "PMI2017", "rep": "2017" },
+                    { "key": "PMI2018", "rep": "2018" }
+                  ]
+                },
+                "key": "key",
+                "fields": ["rep"]
+              }
+            },
+            { "calculate": "replace(datum.value, '%', '')", "as": "value2"}
+      ],
+      "mark": {
+        "type": "point",
+        "invalid": "filter"
+      },
+      "encoding": {
+        "facet": {
+          "field": "RegionNombre",
+          "type": "ordinal",
+          "rows": 1,
+          "title": "% of inadequate samples by region"
+        },
+        "order": {"field": "rep", "type": "quantitative"},
+        "y": {
+          "field": "value2", 
+          "type": "quantitative",
+          "aggregate": "mean", 
+          "axis": {
+            "title": ""
+          }
+        },
+        "x": {
+          "field": "rep",
+          "type": "nominal",
+          "axis": {
+            "grid": true,
+            "title": ""
+          }
+        }
+      }
+    }
+  ]
+}
