@@ -17,7 +17,8 @@ library(haven)
 # Changed this to run with a explicitly set boolean. EKL 3/18/19
 # Boolean logic switch:
 # Set at_ciesar = 1 if you want CIESAR's local filepaths.
-at_ciesar = FALSE
+if (!exists("at_ciesar"))
+    at_ciesar = FALSE
 
 if (at_ciesar==TRUE) {
 	dataPath = "PCE/Covariates and Other Data/GIS/"
