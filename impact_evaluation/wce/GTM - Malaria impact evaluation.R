@@ -449,7 +449,7 @@ AIC(model1)
 
 modelF2 = glmer(Notifs ~ 
                    1 + notifsLagYear_1_n +
-                   cumBNLagSem_1_l10n
+                   cumBNLagSem_1_l10n + 
                    (1 + factor(Semester) + notifsLagYear_1_n | deptocode)
                ,
                data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
@@ -459,3 +459,4 @@ modelF2 = glmer(Notifs ~
                                     optCtrl  = list(maxfun=2e5)
                ))
 summary(modelF2)
+1-exp(fixef(modelF2))
