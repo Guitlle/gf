@@ -9,6 +9,7 @@ install.packages(c("lme4", "data.table"))
 library(data.table)
 library(lme4)
 
+# Instead of hard coding this path, let's set it up as working dir before running the code.
 codePath = "PCE/gf/"
 
 # Requirements:
