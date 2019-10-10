@@ -9,6 +9,7 @@ install.packages(c("lme4", "data.table"))
 library(data.table)
 library(lme4)
 
+# Instead of hard coding this path, let's set it up as working dir before running the code.
 codePath = "PCE/gf/"
 
 # Requirements:
@@ -430,3 +431,33 @@ ranef(model5)
 # What does bednet fixed effect estimation looks like, with p-values and all:
 summary(model5b)
 ranef(model5b)
+
+# Model without other interventions
+model1 = glmer(Notifs ~ 
+                   1 + notifsLagYear_1_n +
+                   cumBNLagSem_1_l10n:factor(deptocode) + 
+                   (1 + factor(Semester) + notifsLagYear_1_n | deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+summary(model1)
+ranef(model1)
+AIC(model1)
+
+modelF2 = glmer(Notifs ~ 
+                   1 + notifsLagYear_1_n +
+                   cumBNLagSem_1_l10n + 
+                   (1 + factor(Semester) + notifsLagYear_1_n | deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                      (datmalaria2$semindex %in% c(7,8,9,10,11,12,13,14)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+summary(modelF2)
+1-exp(fixef(modelF2))
