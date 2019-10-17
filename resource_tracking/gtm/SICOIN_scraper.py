@@ -65,7 +65,7 @@ def getReportGUI(driver, clicks_sequence):
     
 # Reports following a typical pattern found in SICOIN, where filters are set in an upper frame
 # while month option is put in the lower frame and then a form is submitted to download an excel file
-def reportTypeA(driver, clicks_sequence, filters):
+def reportTypeA(driver, clicks_sequence, filters, mes_inicio = "ENERO", mes_final = "DICIEMBRE"):
     getReportGUI(driver, clicks_sequence)
     findHeading(driver)
     pags = driver.find_element_by_id("paginas")
@@ -82,7 +82,8 @@ def reportTypeA(driver, clicks_sequence, filters):
         driver.find_element_by_id("UCFiltroReporte1_Button1").click()
     driver.switch_to.parent_frame()
     driver.switch_to.frame(frames[1])
-    driver.find_element_by_id("P_MES_FIN").send_keys("DICIEMBRE")
+    driver.find_element_by_id("P_MES_INI").send_keys(mes_inicio)
+    driver.find_element_by_id("P_MES_FIN").send_keys(mes_final)
     driver.find_elements_by_name("opExport")[1].click()
     driver.find_element_by_id("sbtContinuar").click()
     driver.refresh()
