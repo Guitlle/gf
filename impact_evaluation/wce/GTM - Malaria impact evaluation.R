@@ -5,10 +5,10 @@
 # Preliminary analysis of bednets impact
 # Also some analysis of other interventions such as breeding sites treatment
 # --------------------------
-install.packages(c("lme4", "data.table"))
+
 library(data.table)
 library(lme4)
-
+library(ggplot2)
 # Instead of hard coding this path, let's set it up as working dir before running the code.
 codePath = "PCE/gf/"
 
@@ -23,7 +23,7 @@ breeds = read.csv("PCE/Outcome Measurement Data/MALARIA/SIGSA 6m - Malaria produ
 
 
 datmalaria$notifsLagYear_1 = datmalaria$notifsLagSem_1 + datmalaria$notifsLagSem_2
-datmalaria$notifsLagYear_1_n = log(datmalaria$notifsLagYear_1+1)
+datmalaria$notifsLagYear_1_n = log10(datmalaria$notifsLagYear_1+1)
 
 # Cum BN
 datmalaria$cumBN_n = datmalaria$cumBN/10000  #  log10(datmalaria$cumBN+1)
@@ -461,3 +461,163 @@ modelF2 = glmer(Notifs ~
                ))
 summary(modelF2)
 1-exp(fixef(modelF2))
+
+
+# ------------- 
+# 2019/11/19
+# Use a better counterfactual, rerun model with complete 2018 data
+datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+              (datmalaria2$semindex %in% c(8,9,10,11,12,13,14)), notifsLagYear_1]
+model0 = glmer(Notifs ~ 
+                 1 +factor(Semester) + notifsLagYear_1_n +
+                 cumBNLagSem_1_l10n + 
+                 (1 + factor(Semester) + notifsLagYear_1_n + cumBNLagSem_1_l10n| deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                    (datmalaria2$semindex %in% c(8,9,10,11,12,13,14)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+summary(model0)
+# 1 semester lag is significantly contributing to diminishing notif rate
+# 
+
+model1 = glmer(Notifs ~ 
+                  1 + factor(Semester) + notifsLagYear_1_n +
+                 (cumBNLagSem_2_l10n + cumBNLagSem_1_l10n):factor(deptocode) + 
+                  (1 +factor(Semester) + notifsLagYear_1_n | deptocode)
+                ,
+                data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                     (datmalaria2$semindex %in% c(8,9,10,11,12,13,14)), ],
+                family=poisson,
+                control=glmerControl(optimizer= "bobyqa",
+                                     optCtrl  = list(maxfun=2e5)
+                ))
+summary(model1)
+1-exp(fixef(model1))
+
+
+model2 = glmer(Notifs ~ 
+                 1 + factor(Semester) + notifsLagYear_1_n +
+                 cumBNLagSem_1_l10n + 
+                 (1 + factor(Semester) + notifsLagYear_1_n| deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                    (datmalaria2$semindex %in% c(8,9,10,11,12,13,14)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+summary(model2)
+1-exp(fixef(model2))
+
+model3 = glmer(Notifs ~ 
+                  1 + factor(Semester) + notifsLagYear_1_n +
+                  cumBNLagSem_1_l10n:factor(deptocode) + 
+                  txs_rociamiento + 
+                  txs_criads + 
+                (1 + notifsLagYear_1_n| deptocode)
+                ,
+                data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                     (datmalaria2$semindex %in% c(8,9,10,11,12,13,14)), ],
+                family=poisson,
+                control=glmerControl(optimizer= "bobyqa",
+                                     optCtrl  = list(maxfun=2e5)
+                ))
+summary(model3)
+vcov(model3)
+AIC(model3)
+ranef(model3)
+
+# This is the official model:
+datmalaria2[, Semester:=factor(Semester)]
+model4 = glmer(Notifs ~ 
+                 1 + Semester + notifsLagYear_1_n +
+                 cumBNLagSem_1_l10n +  
+                 txs_rociamiento + 
+                 txs_criads + 
+                 (1 + Semester + notifsLagYear_1_n|deptocode) + 
+                 (-1 +  
+                    txs_rociamiento + 
+                    txs_criads|deptocode)
+               ,
+               data = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+                                    (datmalaria2$semindex %in% c(8,9,10,11,12,13)), ],
+               family=poisson,
+               control=glmerControl(optimizer= "bobyqa",
+                                    optCtrl  = list(maxfun=2e5)
+               ))
+summary(model4)
+AIC(model4)
+ranef(model4)
+confint(model4, method="Wald")
+#model4@beta[4] = -0.21771328
+# cumBNLagSem_1_l10n -0.5902189 -0.21771328
+# cumBNLagSem_1_l10n -0.403966   0.095029  -4.251 2.13e-05 ***
+
+
+# Final model ^^^
+# 
+
+
+# Predict what would happen in bednets stop being distributed in 2015
+counterfactual = datmalaria2[(datmalaria2$deptocode %in% deptosGood) & 
+              (datmalaria2$semindex %in% c(7,8,9,10,11,12,13)), 
+              .(cumBNLagSem_1_l10n = log10(cumBN_cf_LagSem_1+1), cumBNLagSem_2_l10n = log10(cumBN_cf_LagSem_2+1),
+                cumBN_cf_l1 = cumBN_cf_LagSem_1, cumBN_l1 = cumBNLagSem_1, Notifs_old = Notifs, notifsLagYear_1_n, 
+                notifsLagSem_2, txs_rociamiento, txs_criads, Semester, deptocode, semindex, cumBN_cf, cumBN, semindex, Semester)]
+# Model explodes when estimations by department are made, models with overall effect are ok.
+selmodel = model4
+calcBootMerInts = T
+counterfactual[semindex==7, predN := Notifs_old]
+for (val in seq(8,13)) {
+    print(paste("step", val))
+    cfdata = copy(counterfactual[semindex==val])
+    if (val>9) {
+        cfdata[ , notifsLagYear_1_n := log10(1+counterfactual[semindex==val-2]$predN + counterfactual[semindex==val-1]$predN)]
+    }
+    if (val==9) {
+        cfdata[, notifsLagYear_1_n := log10(1+counterfactual[semindex==val]$notifsLagSem_2 + counterfactual[semindex==val-1]$predN)]
+    }
+    counterfactual[semindex==val, predN := predict(selmodel, newdata=cfdata, type="response", re.form=NULL)]
+    if (calcBootMerInts) {
+        predict.fun <- function(model) {
+          predict(model, newdata = cfdata, re.form = NULL)
+        }
+        counterfactual[semindex==val, bootMerPred:= exp(predict.fun(selmodel)) ]
+        lmm.boots <- bootMer(selmodel, predict.fun, nsim = 100, ncpus=4, use.u=TRUE)
+        confintscf <- confint(lmm.boots)
+        counterfactual[semindex==val, bootMerPredCI1 := exp(confintscf[,colnames(confintscf)[1]]) ]
+        counterfactual[semindex==val, bootMerPredCI2 := exp(confintscf[,colnames(confintscf)[2]]) ]
+    }
+}
+
+if (calcBootMerInts) {
+    counterfactual[,a := bootMerPred-Notifs_old]
+    print("Estimación")
+    print(sum(counterfactual[semindex > 7, a]))
+    print(sum(counterfactual[semindex > 7, bootMerPredCI2-Notifs_old]))
+    print(sum(counterfactual[semindex > 7, bootMerPredCI1-Notifs_old]))
+    
+    plotdata = counterfactual[,.(cfci1 = sum(bootMerPredCI1), cfci2 = sum(bootMerPredCI2), 
+                             cf = sum(predN), f=sum(Notifs_old), bncf = sum(cumBN_cf), bnf = sum(cumBN) ),by=.(semindex)]
+} else {
+    counterfactual[,a := predN-Notifs_old]
+    print("Estimación")
+    print(sum(counterfactual$a))
+    plotdata = counterfactual[,.(cf = sum(predN), f=sum(Notifs_old), bncf = sum(cumBN_cf), bnf = sum(cumBN) ),by=.(semindex)]
+}
+sum(counterfactual[,predN-Notifs_old])
+
+plotdata = melt(plotdata, id.vars = ("semindex"))
+ggplot(data = plotdata[variable %in% c("f", "cf")]) + geom_line(aes(x = semindex, y = value, color=variable))
+if (calcBootMerInts) {
+    ggplot(data = plotdata[variable %in% c("f", "cf", "cfci1", "cfci2")]) + geom_line(aes(x = semindex, y = value, color=variable))
+}
+ggplot(data = plotdata[variable %in% c("bncf")]) + geom_line(aes(x = semindex, y = value, color=variable))
+
+ggplot() + geom_line(data = datmalaria[,.(value=sum(cumBN_cf)),by=semindex], aes(x = semindex, y = value))
+
+write.csv(plotdata, "PCE/Impact Evaluation/wce_impact_eval_model4_counterfactual.csv")
+
